@@ -19,7 +19,8 @@ app.set("trust proxy", 1);
 app.use(express.json());
 app.use(cors({ 
   origin: [
-    "https://talentiq-platform-new.vercel.app"
+    "https://talentiq-platform-new.vercel.app",
+    "https://www.talentiq.live"
   ], 
   credentials: true 
 }));
