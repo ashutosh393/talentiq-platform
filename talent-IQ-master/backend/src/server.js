@@ -1,5 +1,4 @@
 import express from "express";
-import path from "path";
 import cors from "cors";
 import { serve } from "inngest/express";
 import { clerkMiddleware } from "@clerk/express";
@@ -13,13 +12,18 @@ import sessionRoutes from "./routes/sessionRoute.js";
 
 const app = express();
 
-const __dirname = path.resolve();
+// ✅ Required for Railway proxy
+app.set("trust proxy", 1);
 
 // middleware
 app.use(express.json());
-// credentials:true meaning?? => server allows a browser to include cookies on request
-app.use(cors({ origin: ENV.CLIENT_URL, credentials: true }));
-app.use(clerkMiddleware()); // this adds auth field to request object: req.auth()
+app.use(cors({ 
+  origin: [
+    "https://talentiq-platform-new.vercel.app"
+  ], 
+  credentials: true 
+}));
+app.use(clerkMiddleware());
 
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
@@ -32,15 +36,6 @@ app.get("/health", (req, res) => {
 app.get("/", (req, res) => {
   res.status(200).json({ msg: "talentIQ backend is running" });
 });
-
-// make our app ready for deployment
-if (ENV.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend/dist")));
-
-  app.get("/{*any}", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "dist", "index.html"));
-  });
-}
 
 const startServer = async () => {
   try {
