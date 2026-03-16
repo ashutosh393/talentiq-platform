@@ -1,82 +1,75 @@
-// Judge0 CE API via RapidAPI
-const JUDGE0_API_URL = import.meta.env.VITE_JUDGE0_API_URL || "https://judge0-ce.p.rapidapi.com";
+const ONECOMPILER_API = "https://onecompiler.com/api/v1";
+const ONECOMPILER_API_KEY = import.meta.env.VITE_ONECOMPILER_API_KEY;
 
-const LANGUAGE_IDS = {
-  javascript: 63,
-  python: 71,
-  java: 62,
+const LANGUAGE_VERSIONS = {
+  javascript: { language: "nodejs" },
+  python: { language: "python" },
+  java: { language: "java" },
+  cpp: { language: "cpp" },
+  csharp: { language: "csharp" },
+  go: { language: "go" },
+  rust: { language: "rust" },
 };
 
-/**
- * @param {string} language - programming language
- * @param {string} code - source code to executed
- * @returns {Promise<{success:boolean, output?:string, error?: string}>}
- */
 export async function executeCode(language, code) {
+  if (!ONECOMPILER_API_KEY) {
+    return {
+      success: false,
+      error: "OneCompiler API key not configured. Set VITE_ONECOMPILER_API_KEY in .env",
+    };
+  }
   try {
-    const languageId = LANGUAGE_IDS[language];
-
-    if (!languageId) {
-      return {
-        success: false,
-        error: `Unsupported language: ${language}`,
-      };
+    const languageConfig = LANGUAGE_VERSIONS[language];
+    if (!languageConfig) {
+      return { success: false, error: `Unsupported language: ${language}` };
     }
 
-    const rapidApiKey = import.meta.env.VITE_JUDGE0_API_KEY;
-    const rapidApiHost = import.meta.env.VITE_JUDGE0_API_HOST || "judge0-ce.p.rapidapi.com";
-
-    if (!rapidApiKey) {
-      return {
-        success: false,
-        error: "Missing Judge0 API key. Set VITE_JUDGE0_API_KEY in frontend env.",
-      };
-    }
-
-    const response = await fetch(`${JUDGE0_API_URL}/submissions?base64_encoded=false&wait=true`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-rapidapi-key": rapidApiKey,
-        "x-rapidapi-host": rapidApiHost,
-      },
-      body: JSON.stringify({
-        language_id: languageId,
-        source_code: code,
-      }),
-    });
+    const response = await fetch(
+      `${ONECOMPILER_API}/run?access_token=${ONECOMPILER_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          language: languageConfig.language,
+          files: [
+            {
+              name: `main.${getFileExtension(language)}`,
+              content: code,
+            },
+          ],
+        }),
+      }
+    );
 
     if (!response.ok) {
-      return {
-        success: false,
-        error: `HTTP error! status: ${response.status}`,
-      };
+      return { success: false, error: `HTTP error! status: ${response.status}` };
     }
 
     const data = await response.json();
 
-    const output = data.stdout || "";
-    const stderr = data.stderr || "";
-    const compileOutput = data.compile_output || "";
-    const message = data.message || "";
-    const statusDescription = data.status?.description || "";
-
-    if (stderr || compileOutput || message) {
-      return {
-        success: false,
-        output,
-        error: stderr || compileOutput || message || statusDescription || "Execution failed",
-      };
+    if (data.status === "failed") {
+      return { success: false, error: data.exception || "Execution failed" };
     }
 
     return {
       success: true,
-      output: output || statusDescription || "No output",
+      output: data.stdout || "",
+      stderr: data.stderr || "",
     };
   } catch (error) {
-    return {
-      success: false,
-      error: `Failed to execute code: ${error.message}`,
-    };
+    return { success: false, error: error.message || "Code execution failed" };
   }
+}
+
+function getFileExtension(language) {
+  const extensions = {
+    javascript: "js",
+    python: "py",
+    java: "java",
+    cpp: "cpp",
+    csharp: "cs",
+    go: "go",
+    rust: "rs",
+  };
+  return extensions[language] || language;
 }

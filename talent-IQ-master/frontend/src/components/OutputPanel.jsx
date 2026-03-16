@@ -6,9 +6,25 @@ function OutputPanel({ output }) {
       </div>
       <div className="flex-1 overflow-auto p-4">
         {output === null ? (
-          <p className="text-base-content/50 text-sm">Click "Run Code" to see the output here...</p>
+          <p className="text-base-content/50 text-sm">
+            Click "Run Code" to see the output here...
+          </p>
         ) : output.success ? (
-          <pre className="text-sm font-mono text-success whitespace-pre-wrap">{output.output}</pre>
+          <div>
+            {output.output ? (
+              <pre className="text-sm font-mono text-success whitespace-pre-wrap">
+                {output.output}
+              </pre>
+            ) : (
+              <p className="text-base-content/50 text-sm">No output</p>
+            )}
+            {/* show stderr as warning even on success */}
+            {output.stderr && (
+              <pre className="text-sm font-mono text-warning whitespace-pre-wrap mt-2">
+                {output.stderr}
+              </pre>
+            )}
+          </div>
         ) : (
           <div>
             {output.output && (
@@ -16,11 +32,14 @@ function OutputPanel({ output }) {
                 {output.output}
               </pre>
             )}
-            <pre className="text-sm font-mono text-error whitespace-pre-wrap">{output.error}</pre>
+            <pre className="text-sm font-mono text-error whitespace-pre-wrap">
+              {output.error}
+            </pre>
           </div>
         )}
       </div>
     </div>
   );
 }
+
 export default OutputPanel;
