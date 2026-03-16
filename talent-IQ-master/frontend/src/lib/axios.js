@@ -1,17 +1,15 @@
 import axios from "axios";
-import { getAuth } from "@clerk/clerk-react";
 
 const axiosInstance = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
   withCredentials: true,
 });
 
-// Add Clerk token interceptor - THIS IS CRITICAL
+// Add Clerk token interceptor - access Clerk instance directly
 axiosInstance.interceptors.request.use(
   async (config) => {
     try {
-      const { getToken } = getAuth();
-      const token = await getToken();
+      const token = await window.Clerk?.session?.getToken();
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       }
