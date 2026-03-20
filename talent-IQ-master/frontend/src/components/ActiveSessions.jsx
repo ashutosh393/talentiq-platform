@@ -1,109 +1,219 @@
 import {
-  ArrowRightIcon,
-  Code2Icon,
-  CrownIcon,
-  SparklesIcon,
-  UsersIcon,
-  ZapIcon,
-  LoaderIcon,
+  ArrowRightIcon, Code2Icon, CrownIcon,
+  SparklesIcon, UsersIcon, ZapIcon, LoaderIcon,
 } from "lucide-react";
 import { Link } from "react-router";
-import { getDifficultyBadgeClass } from "../lib/utils";
+
+const diffColor = (d) => {
+  if (d === "easy")   return { bg: "#00E5A015", color: "#00E5A0", border: "#00E5A025" };
+  if (d === "medium") return { bg: "#F59E0B15", color: "#F59E0B", border: "#F59E0B25" };
+  return                     { bg: "#F8717115", color: "#F87171", border: "#F8717125" };
+};
 
 function ActiveSessions({ sessions, isLoading, isUserInSession }) {
   return (
-    <div className="lg:col-span-2 card bg-base-100 border-2 border-primary/20 hover:border-primary/30 h-full">
-      <div className="card-body">
-        {/* HEADERS SECTION */}
-        <div className="flex items-center justify-between mb-6">
-          {/* TITLE AND ICON */}
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-br from-primary to-secondary rounded-xl">
-              <ZapIcon className="size-5" />
-            </div>
-            <h2 className="text-2xl font-black">Live Sessions</h2>
-          </div>
+    <>
+      <style>{`
+        .active-card {
+          background: #111520;
+          border: 1px solid #ffffff12;
+          border-radius: 16px;
+          padding: 28px;
+          display: flex;
+          flex-direction: column;
+          min-height: 320px;
+        }
+        .active-card-header {
+          display: flex; align-items: center;
+          justify-content: space-between; margin-bottom: 24px;
+        }
+        .active-card-title {
+          display: flex; align-items: center; gap: 10px;
+        }
+        .active-icon-wrap {
+          width: 36px; height: 36px; border-radius: 10px;
+          background: #00E5A015; border: 1px solid #00E5A025;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .active-h2 {
+          font-family: 'Syne', sans-serif;
+          font-size: 20px; font-weight: 700; color: #EEF2FF;
+        }
+        .active-count {
+          display: flex; align-items: center; gap: 6px;
+          font-size: 13px; color: #22C55E;
+        }
+        .active-count-dot {
+          width: 7px; height: 7px; border-radius: 50%;
+          background: #22C55E; box-shadow: 0 0 6px #22C55E60;
+        }
+        .active-list {
+          display: flex; flex-direction: column; gap: 12px;
+          max-height: 400px; overflow-y: auto;
+          padding-right: 4px;
+          scrollbar-width: thin;
+          scrollbar-color: #ffffff12 transparent;
+        }
+        .session-row {
+          background: #0C0F13;
+          border: 1px solid #ffffff08;
+          border-radius: 12px;
+          padding: 16px 20px;
+          display: flex; align-items: center;
+          justify-content: space-between; gap: 16px;
+          transition: border-color 0.2s;
+        }
+        .session-row:hover { border-color: #00E5A025; }
+        .session-row-left { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
+        .session-code-icon {
+          position: relative;
+          width: 48px; height: 48px; border-radius: 12px;
+          background: #00E5A015; border: 1px solid #00E5A025;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0;
+        }
+        .session-live-dot {
+          position: absolute; top: -3px; right: -3px;
+          width: 10px; height: 10px; border-radius: 50%;
+          background: #22C55E; border: 2px solid #0C0F13;
+          box-shadow: 0 0 6px #22C55E60;
+        }
+        .session-problem {
+          font-family: 'Syne', sans-serif;
+          font-size: 14px; font-weight: 600;
+          color: #EEF2FF; margin-bottom: 6px;
+          white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .session-meta {
+          display: flex; align-items: center; gap: 12px;
+          font-size: 12px; color: #7A8499;
+        }
+        .session-meta-item { display: flex; align-items: center; gap: 4px; }
+        .diff-badge {
+          font-size: 10px; font-weight: 500;
+          padding: 2px 8px; border-radius: 100px;
+        }
+        .status-badge {
+          font-size: 10px; font-weight: 600;
+          padding: 2px 8px; border-radius: 100px;
+          letter-spacing: 0.04em;
+        }
+        .badge-full  { background: #F8717115; color: #F87171; border: 1px solid #F8717125; }
+        .badge-open  { background: #00E5A015; color: #00E5A0; border: 1px solid #00E5A025; }
+        .join-btn {
+          display: flex; align-items: center; gap: 6px;
+          padding: 7px 14px; border-radius: 8px;
+          background: #00E5A0; color: #000;
+          font-size: 13px; font-weight: 600;
+          text-decoration: none; border: none; cursor: pointer;
+          transition: all 0.2s; white-space: nowrap; flex-shrink: 0;
+        }
+        .join-btn:hover { background: #00FFB3; transform: translateY(-1px); }
+        .join-btn-disabled {
+          padding: 7px 14px; border-radius: 8px;
+          background: #ffffff08; color: #3A4255;
+          font-size: 13px; font-weight: 500;
+          border: 1px solid #ffffff08; cursor: not-allowed;
+          white-space: nowrap; flex-shrink: 0;
+        }
+        .active-empty {
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center;
+          padding: 40px 20px; text-align: center;
+        }
+        .active-empty-icon {
+          width: 72px; height: 72px; border-radius: 20px;
+          background: #00E5A008; border: 1px solid #00E5A015;
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 16px;
+        }
+        .active-empty-title { font-size: 16px; font-weight: 600; color: #EEF2FF; margin-bottom: 6px; }
+        .active-empty-sub   { font-size: 13px; color: #3A4255; }
+        .active-loader {
+          flex: 1; display: flex;
+          align-items: center; justify-content: center; padding: 40px;
+        }
+      `}</style>
 
-          <div className="flex items-center gap-2">
-            <div className="size-2 bg-success rounded-full" />
-            <span className="text-sm font-medium text-success">{sessions.length} active</span>
+      <div className="active-card" style={{ gridColumn: "span 2" }}>
+        {/* Header */}
+        <div className="active-card-header">
+          <div className="active-card-title">
+            <div className="active-icon-wrap">
+              <ZapIcon size={18} color="#00E5A0" />
+            </div>
+            <h2 className="active-h2">Live Sessions</h2>
+          </div>
+          <div className="active-count">
+            <div className="active-count-dot"></div>
+            <span>{sessions.length} active</span>
           </div>
         </div>
 
-        {/* SESSIONS LIST */}
-        <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-20">
-              <LoaderIcon className="size-10 animate-spin text-primary" />
-            </div>
-          ) : sessions.length > 0 ? (
-            sessions.map((session) => (
-              <div
-                key={session._id}
-                className="card bg-base-200 border-2 border-base-300 hover:border-primary/50"
-              >
-                <div className="flex items-center justify-between gap-4 p-5">
-                  {/* LEFT SIDE */}
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="relative size-14 rounded-xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                      <Code2Icon className="size-7 text-white" />
-                      <div className="absolute -top-1 -right-1 size-4 bg-success rounded-full border-2 border-base-100" />
+        {/* Body */}
+        {isLoading ? (
+          <div className="active-loader">
+            <LoaderIcon size={36} color="#00E5A0" style={{ animation: "spin 1s linear infinite" }} />
+          </div>
+        ) : sessions.length > 0 ? (
+          <div className="active-list">
+            {sessions.map((session) => {
+              const dc = diffColor(session.difficulty);
+              const isFull = session.participant && !isUserInSession(session);
+              return (
+                <div key={session._id} className="session-row">
+                  <div className="session-row-left">
+                    <div className="session-code-icon">
+                      <Code2Icon size={22} color="#00E5A0" />
+                      <div className="session-live-dot"></div>
                     </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="font-bold text-lg truncate">{session.problem}</h3>
-                        <span
-                          className={`badge badge-sm ${getDifficultyBadgeClass(
-                            session.difficulty
-                          )}`}
-                        >
-                          {session.difficulty.slice(0, 1).toUpperCase() +
-                            session.difficulty.slice(1)}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                        <div className="session-problem">{session.problem}</div>
+                        <span className="diff-badge" style={{ background: dc.bg, color: dc.color, border: `1px solid ${dc.border}` }}>
+                          {session.difficulty.charAt(0).toUpperCase() + session.difficulty.slice(1)}
                         </span>
                       </div>
-
-                      <div className="flex items-center gap-4 text-sm opacity-80">
-                        <div className="flex items-center gap-1.5">
-                          <CrownIcon className="size-4" />
-                          <span className="font-medium">{session.host?.name}</span>
+                      <div className="session-meta">
+                        <div className="session-meta-item">
+                          <CrownIcon size={13} />
+                          <span>{session.host?.name}</span>
                         </div>
-                        <div className="flex items-center gap-1.5">
-                          <UsersIcon className="size-4" />
-                          <span className="text-xs">{session.participant ? "2/2" : "1/2"}</span>
+                        <div className="session-meta-item">
+                          <UsersIcon size={13} />
+                          <span>{session.participant ? "2/2" : "1/2"}</span>
                         </div>
-                        {session.participant && !isUserInSession(session) ? (
-                          <span className="badge badge-error badge-sm">FULL</span>
-                        ) : (
-                          <span className="badge badge-success badge-sm">OPEN</span>
-                        )}
+                        <span className={`status-badge ${isFull ? "badge-full" : "badge-open"}`}>
+                          {isFull ? "FULL" : "OPEN"}
+                        </span>
                       </div>
                     </div>
                   </div>
 
-                  {session.participant && !isUserInSession(session) ? (
-                    <button className="btn btn-disabled btn-sm">Full</button>
+                  {isFull ? (
+                    <span className="join-btn-disabled">Full</span>
                   ) : (
-                    <Link to={`/session/${session._id}`} className="btn btn-primary btn-sm gap-2">
+                    <Link to={`/session/${session._id}`} className="join-btn">
                       {isUserInSession(session) ? "Rejoin" : "Join"}
-                      <ArrowRightIcon className="size-4" />
+                      <ArrowRightIcon size={14} />
                     </Link>
                   )}
                 </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 mx-auto mb-4 bg-gradient-to-br from-primary/20 to-secondary/20 rounded-3xl flex items-center justify-center">
-                <SparklesIcon className="w-10 h-10 text-primary/50" />
-              </div>
-              <p className="text-lg font-semibold opacity-70 mb-1">No active sessions</p>
-              <p className="text-sm opacity-50">Be the first to create one!</p>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="active-empty">
+            <div className="active-empty-icon">
+              <SparklesIcon size={32} color="#00E5A040" />
             </div>
-          )}
-        </div>
+            <div className="active-empty-title">No active sessions</div>
+            <div className="active-empty-sub">Be the first to create one!</div>
+          </div>
+        )}
       </div>
-    </div>
+    </>
   );
 }
+
 export default ActiveSessions;

@@ -1,39 +1,99 @@
 import { useUser } from "@clerk/clerk-react";
-import { ArrowRightIcon, SparklesIcon, ZapIcon } from "lucide-react";
+import { ArrowRightIcon, ZapIcon } from "lucide-react";
 
 function WelcomeSection({ onCreateSession }) {
   const { user } = useUser();
 
   return (
-    <div className="relative overflow-hidden">
-      <div className="relative max-w-7xl mx-auto px-6 py-16">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                <SparklesIcon className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-5xl font-black bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
-                Welcome back, {user?.firstName || "there"}!
-              </h1>
+    <>
+      <style>{`
+        .welcome-wrap {
+          position: relative;
+          overflow: hidden;
+          border-bottom: 1px solid #ffffff08;
+        }
+        .welcome-wrap::before {
+          content: '';
+          position: absolute; inset: 0;
+          background: radial-gradient(ellipse 60% 80% at 20% 50%, #00E5A008 0%, transparent 70%);
+          pointer-events: none;
+        }
+        .welcome-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 56px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 24px;
+        }
+        .welcome-left { flex: 1; }
+        .welcome-badge {
+          display: inline-flex; align-items: center; gap: 8px;
+          background: #00E5A015; border: 1px solid #00E5A025;
+          color: #00E5A0; font-size: 12px; font-weight: 500;
+          padding: 4px 12px; border-radius: 100px; margin-bottom: 20px;
+        }
+        .welcome-badge-dot {
+          width: 6px; height: 6px; background: #00E5A0;
+          border-radius: 50%; animation: wblink 1.5s infinite;
+        }
+        @keyframes wblink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+        .welcome-title {
+          font-family: 'Syne', sans-serif;
+          font-size: 42px; font-weight: 800;
+          letter-spacing: -1.5px; line-height: 1.1;
+          color: #EEF2FF; margin-bottom: 12px;
+        }
+        .welcome-title span { color: #00E5A0; }
+        .welcome-sub {
+          font-size: 16px; color: #7A8499;
+          font-weight: 300; line-height: 1.6;
+        }
+        .welcome-btn {
+          display: flex; align-items: center; gap: 10px;
+          padding: 14px 28px; border-radius: 12px;
+          background: #00E5A0; color: #000;
+          border: none; cursor: pointer;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 15px; font-weight: 600;
+          transition: all 0.2s; white-space: nowrap;
+        }
+        .welcome-btn:hover {
+          background: #00FFB3;
+          transform: translateY(-2px);
+          box-shadow: 0 12px 32px #00E5A022;
+        }
+        .welcome-btn svg { transition: transform 0.2s; }
+        .welcome-btn:hover svg:last-child { transform: translateX(4px); }
+        @media(max-width:640px){
+          .welcome-inner { flex-direction: column; align-items: flex-start; padding: 40px 20px; }
+          .welcome-title { font-size: 28px; }
+          .welcome-btn { width: 100%; justify-content: center; }
+        }
+      `}</style>
+
+      <div className="welcome-wrap">
+        <div className="welcome-inner">
+          <div className="welcome-left">
+            <div className="welcome-badge">
+              <div className="welcome-badge-dot"></div>
+              Welcome back
             </div>
-            <p className="text-xl text-base-content/60 ml-16">
-              Ready to level up your coding skills?
-            </p>
+            <h1 className="welcome-title">
+              Hey, <span>{user?.firstName || "there"}</span> 👋
+            </h1>
+            <p className="welcome-sub">Ready to level up your coding skills today?</p>
           </div>
-          <button
-            onClick={onCreateSession}
-            className="group px-8 py-4 bg-gradient-to-r from-primary to-secondary rounded-2xl transition-all duration-200 hover:opacity-90"
-          >
-            <div className="flex items-center gap-3 text-white font-bold text-lg">
-              <ZapIcon className="w-6 h-6" />
-              <span>Create Session</span>
-              <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </div>
+
+          <button className="welcome-btn" onClick={onCreateSession}>
+            <ZapIcon size={18} />
+            <span>Create Session</span>
+            <ArrowRightIcon size={16} />
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

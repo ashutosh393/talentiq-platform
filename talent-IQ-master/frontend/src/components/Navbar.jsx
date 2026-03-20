@@ -4,74 +4,94 @@ import { UserButton } from "@clerk/clerk-react";
 
 function Navbar() {
   const location = useLocation();
-
-  console.log(location);
-
   const isActive = (path) => location.pathname === path;
 
   return (
-    <nav className="bg-base-100/80 backdrop-blur-md border-b border-primary/20 sticky top-0 z-50 shadow-lg">
-      <div className="max-w-7xl mx-auto p-4 flex items-center justify-between">
-        {/* LOGO */}
-        <Link
-          to="/"
-          className="group flex items-center gap-3 hover:scale-105 transition-transform duration-200"
-        >
-          <div className="size-10 rounded-xl bg-gradient-to-r from-primary via-secondary to-accent flex items-center justify-center shadow-lg ">
-            <SparklesIcon className="size-6 text-white" />
-          </div>
+    <>
+      <style>{`
+        .tiq-nav {
+          background: rgba(8,10,13,0.85);
+          backdrop-filter: blur(24px);
+          border-bottom: 1px solid #ffffff12;
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+        .tiq-nav-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 14px 24px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+        }
+        .tiq-logo {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          text-decoration: none;
+          transition: transform 0.2s;
+        }
+        .tiq-logo:hover { transform: scale(1.03); }
+        .tiq-logo-mark {
+          width: 40px; height: 40px;
+          border-radius: 10px;
+          background: #00E5A0;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .tiq-logo-name {
+          font-family: 'Syne', sans-serif;
+          font-size: 18px; font-weight: 800;
+          color: #EEF2FF; letter-spacing: -0.5px;
+        }
+        .tiq-logo-sub { font-size: 10px; color: #3A4255; font-weight: 300; }
+        .tiq-nav-links { display: flex; align-items: center; gap: 4px; }
+        .tiq-nav-link {
+          display: flex; align-items: center; gap: 8px;
+          padding: 8px 14px; border-radius: 8px;
+          font-size: 14px; font-weight: 500;
+          text-decoration: none;
+          transition: all 0.2s;
+          color: #7A8499;
+        }
+        .tiq-nav-link:hover { background: #111520; color: #EEF2FF; }
+        .tiq-nav-link.active { background: #00E5A015; color: #00E5A0; border: 1px solid #00E5A025; }
+        .tiq-nav-link svg { width: 16px; height: 16px; }
+        .tiq-nav-right { display: flex; align-items: center; gap: 16px; }
+      `}</style>
 
-          <div className="flex flex-col">
-            <span className="font-black text-xl bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent font-mono tracking-wider">
-              Talent IQ
-            </span>
-            <span className="text-xs text-base-content/60 font-medium -mt-1">Code Together</span>
-          </div>
-        </Link>
-
-        <div className="flex items-center gap-1">
-          {/* PROBLEMS PAGE LINK */}
-          <Link
-            to={"/problems"}
-            className={`px-4 py-2.5 rounded-lg transition-all duration-200 
-              ${
-                isActive("/problems")
-                  ? "bg-primary text-primary-content"
-                  : "hover:bg-base-200 text-base-content/70 hover:text-base-content"
-              }
-              
-              `}
-          >
-            <div className="flex items-center gap-x-2.5">
-              <BookOpenIcon className="size-4" />
-              <span className="font-medium hidden sm:inline">Problems</span>
+      <nav className="tiq-nav">
+        <div className="tiq-nav-inner">
+          <Link to="/" className="tiq-logo">
+            <div className="tiq-logo-mark">
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+                <path d="M4 10h12M10 4l6 6-6 6" stroke="#000" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </div>
+            <div>
+              <div className="tiq-logo-name">TalentIQ</div>
+              <div className="tiq-logo-sub">Code Together</div>
             </div>
           </Link>
 
-          {/* DASHBORD PAGE LINK */}
-          <Link
-            to={"/dashboard"}
-            className={`px-4 py-2.5 rounded-lg transition-all duration-200 
-              ${
-                isActive("/dashboard")
-                  ? "bg-primary text-primary-content"
-                  : "hover:bg-base-200 text-base-content/70 hover:text-base-content"
-              }
-              
-              `}
-          >
-            <div className="flex items-center gap-x-2.5">
-              <LayoutDashboardIcon className="size-4" />
-              <span className="font-medium hidden sm:inline">Dashbord</span>
-            </div>
-          </Link>
+          <div className="tiq-nav-links">
+            <Link to="/problems" className={`tiq-nav-link${isActive("/problems") ? " active" : ""}`}>
+              <BookOpenIcon />
+              <span>Problems</span>
+            </Link>
+            <Link to="/dashboard" className={`tiq-nav-link${isActive("/dashboard") ? " active" : ""}`}>
+              <LayoutDashboardIcon />
+              <span>Dashboard</span>
+            </Link>
+          </div>
 
-          <div className="ml-4 mt-2">
-            <UserButton />
+          <div className="tiq-nav-right">
+            <UserButton afterSignOutUrl="/" />
           </div>
         </div>
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
+
 export default Navbar;

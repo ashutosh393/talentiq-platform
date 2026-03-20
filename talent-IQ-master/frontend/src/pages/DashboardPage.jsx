@@ -23,12 +23,8 @@ function DashboardPage() {
 
   const handleCreateRoom = () => {
     if (!roomConfig.problem || !roomConfig.difficulty) return;
-
     createSessionMutation.mutate(
-      {
-        problem: roomConfig.problem,
-        difficulty: roomConfig.difficulty.toLowerCase(),
-      },
+      { problem: roomConfig.problem, difficulty: roomConfig.difficulty.toLowerCase() },
       {
         onSuccess: (data) => {
           setShowCreateModal(false);
@@ -42,20 +38,45 @@ function DashboardPage() {
   const recentSessions = recentSessionsData?.sessions || [];
 
   const isUserInSession = (session) => {
-    if (!user.id) return false;
-
+    if (!user?.id) return false;
     return session.host?.clerkId === user.id || session.participant?.clerkId === user.id;
   };
 
   return (
     <>
-      <div className="min-h-screen bg-base-300">
+      <style>{`
+        .dashboard-root {
+          min-height: 100vh;
+          background: #080A0D;
+          font-family: 'DM Sans', sans-serif;
+          color: #EEF2FF;
+        }
+        .dashboard-container {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 24px 80px;
+        }
+        .dashboard-grid {
+          display: grid;
+          grid-template-columns: 280px 1fr 1fr;
+          gap: 20px;
+          margin-bottom: 0;
+        }
+        @media(max-width:1024px){
+          .dashboard-grid { grid-template-columns: 1fr 1fr; }
+        }
+        @media(max-width:640px){
+          .dashboard-grid { grid-template-columns: 1fr; }
+          .dashboard-container { padding: 0 16px 60px; }
+        }
+      `}</style>
+
+      <div className="dashboard-root">
         <Navbar />
         <WelcomeSection onCreateSession={() => setShowCreateModal(true)} />
 
-        {/* Grid layout */}
-        <div className="container mx-auto px-6 pb-16">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="dashboard-container">
+          <div className="dashboard-grid">
             <StatsCards
               activeSessionsCount={activeSessions.length}
               recentSessionsCount={recentSessions.length}
@@ -67,7 +88,10 @@ function DashboardPage() {
             />
           </div>
 
-          <RecentSessions sessions={recentSessions} isLoading={loadingRecentSessions} />
+          <RecentSessions
+            sessions={recentSessions}
+            isLoading={loadingRecentSessions}
+          />
         </div>
       </div>
 
