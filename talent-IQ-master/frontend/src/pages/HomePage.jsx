@@ -243,11 +243,11 @@ export default function HomePage() {
         .btn-green:hover{background:#00FFB3;transform:translateY(-1px);box-shadow:0 8px 24px var(--green-glow);}
 
         /* HERO */
-        .hero{min-height:92vh;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:60px;padding:80px 64px;position:relative;overflow:hidden;}
+        .hero{min-height:92vh;display:grid !important;grid-template-columns:1fr 1fr !important;align-items:center;gap:60px;padding:80px 64px;position:relative;overflow:hidden;width:100%;max-width:100vw;box-sizing:border-box;}
         .hero-grid-bg{position:absolute;inset:0;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:64px 64px;mask-image:radial-gradient(ellipse 70% 80% at 30% 50%,black 20%,transparent 80%);pointer-events:none;}
         .hero-orb{position:absolute;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,#00E5A008 0%,transparent 60%);top:50%;left:25%;transform:translate(-50%,-50%);pointer-events:none;animation:orbPulse 6s ease-in-out infinite;}
         @keyframes orbPulse{0%,100%{transform:translate(-50%,-50%) scale(1);opacity:1}50%{transform:translate(-50%,-50%) scale(1.2);opacity:.6}}
-        .hero-left{position:relative;z-index:2;}
+        .hero-left{position:relative;z-index:2;min-width:0 !important;max-width:100%;overflow:hidden;word-break:break-word;}
         .pill{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--green-border);background:var(--green-glow);color:var(--green);font-size:12px;padding:5px 14px 5px 8px;border-radius:100px;margin-bottom:28px;font-weight:500;animation:fadeUp .8s .2s both;}
         .pill-dot{width:6px;height:6px;background:var(--green);border-radius:50%;animation:blink 1.5s infinite;flex-shrink:0;}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
@@ -270,7 +270,7 @@ export default function HomePage() {
         .hst-div{width:1px;height:14px;background:var(--border2);}
 
         /* TERMINAL */
-        .hero-right{position:relative;z-index:2;animation:fadeUp .8s .4s both;}
+        .hero-right{position:relative;z-index:2;animation:fadeUp .8s .4s both;min-width:0 !important;max-width:100%;}
         .terminal{background:var(--surface);border:1px solid var(--border2);border-radius:16px;overflow:hidden;}
         .term-header{display:flex;align-items:center;gap:8px;padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);}
         .term-dots{display:flex;gap:6px;}
