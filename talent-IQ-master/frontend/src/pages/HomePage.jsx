@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
+import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 const GoogleIcon = ({ size = 14 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
@@ -439,8 +440,12 @@ export default function HomePage() {
           <span className="nav-link">About</span>
         </div>
         <div className="nav-btns">
-          <button className="btn-ghost" onClick={() => navigate("/signin")}>Sign in</button>
-          <button className="btn-green" onClick={() => navigate("/register")}>Get started free</button>
+          <SignInButton mode="modal" fallbackRedirectUrl="/dashboard">
+            <button className="btn-ghost">Sign in</button>
+          </SignInButton>
+          <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+            <button className="btn-green">Get started free</button>
+          </SignUpButton>
         </div>
       </nav>
 
@@ -472,7 +477,9 @@ export default function HomePage() {
           <p className="hero-sub" ref={subRef}></p>
 
           <div className="hero-actions">
-            <button className="btn-hero btn-hp" onClick={() => navigate("/register")}>Start practicing free →</button>
+            <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+              <button className="btn-hero btn-hp">Start practicing free →</button>
+            </SignUpButton>
             <button className="btn-hero btn-hs">
               <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                 <circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.2"/>
@@ -943,7 +950,9 @@ export default function HomePage() {
         <h2>Ready to ace your<br/>next interview?</h2>
         <p>Join 2,400+ developers practicing real problems every day.</p>
         <div className="cta-btns">
-          <button className="btn-hero btn-hp" onClick={() => navigate("/register")}>Get started free →</button>
+          <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+            <button className="btn-hero btn-hp">Get started free →</button>
+          </SignUpButton>
           <button className="btn-hero btn-hs" onClick={scrollToProblems}>Browse problems</button>
         </div>
       </div>
