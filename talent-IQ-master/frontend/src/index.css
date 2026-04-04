@@ -10,7 +10,7 @@
 }
 
 /* ── TALENTIQ LANDING PAGE STYLES ── */
-:root{--green:#00E5A0;--green-dark:#00A36B;--green-glow:#00E5A022;--green-border:#00E5A025;--bg:#080A0D;--bg2:#0C0F13;--surface:#111520;--surface2:#161C28;--border:#ffffff08;--border2:#ffffff12;--border3:#ffffff20;--text:#EEF2FF;--text2:#7A8499;--text3:#3A4255;--purple:#8B7CF6;--amber:#F59E0B;--blue:#60A5FA;}
+:root{--green:#00E5A0;--green-dark:#00A36B;--green-glow:#00E5A022;--green-border:#00E5A025;--bg:#080A0D;--bg2:#0C0F13;--surface:#111520;--surface2:#161C28;--border:#ffffff08;--border2:#ffffff12;--border3:#ffffff20;--text:#EEF2FF;--text2:#7A8499;--text3:#3A4255;--purple:#8B7CF6;--amber:#F59E0B;--blue:#60A5FA;--red:#F87171;}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;}
 body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;cursor:none;min-height:100vh;}

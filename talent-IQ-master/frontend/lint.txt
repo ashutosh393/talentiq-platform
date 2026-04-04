@@ -1,0 +1,19 @@
+﻿
+C:\Users\LOQ\Downloads\talent-IQ-master\talent-IQ-master\frontend\src\components\StatsCards.jsx
+  3:23  error  'activeSessionsCount' is defined but never used  no-unused-vars
+  3:44  error  'recentSessionsCount' is defined but never used  no-unused-vars
+
+C:\Users\LOQ\Downloads\talent-IQ-master\talent-IQ-master\frontend\src\pages\AIPracticePage.jsx
+  11:9  error  'mediaRecorderRef' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\LOQ\Downloads\talent-IQ-master\talent-IQ-master\frontend\src\pages\DashboardPage.jsx
+  20:22  error  'setShowStreak' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\LOQ\Downloads\talent-IQ-master\talent-IQ-master\frontend\src\pages\HomePage.jsx
+  48:9  error  'navigate' is assigned a value but never used. Allowed unused vars must match /^[A-Z_]/u  no-unused-vars
+
+C:\Users\LOQ\Downloads\talent-IQ-master\talent-IQ-master\frontend\src\pages\SessionPage.jsx
+  57:6  warning  React Hook useEffect has missing dependencies: 'joinSessionMutation' and 'refetch'. Either include them or remove the dependency array  react-hooks/exhaustive-deps
+
+Γ£û 6 problems (5 errors, 1 warning)
+

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router";
+
 import { SignInButton, SignUpButton } from "@clerk/clerk-react";
 
 const GoogleIcon = ({ size = 14 }) => (
@@ -45,7 +45,6 @@ const problems = [
 ];
 
 export default function HomePage() {
-  const navigate = useNavigate();
   const subRef = useRef(null);
   const [nlName, setNlName]       = useState("");
   const [nlEmail, setNlEmail]     = useState("");

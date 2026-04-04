@@ -53,7 +53,8 @@ function SessionPage() {
 
     joinSessionMutation.mutate(id, { onSuccess: refetch });
 
-    // remove the joinSessionMutation, refetch from dependencies to avoid infinite loop
+    // We deliberately omit some dependencies here to avoid infinite loops, ignoring exhaustive-deps warning for now.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, user, loadingSession, isHost, isParticipant, id]);
 
   // redirect the "participant" when session ends
@@ -229,9 +230,9 @@ function SessionPage() {
 
               <PanelResizeHandle className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />
 
-              <Panel defaultSize={50} minSize={20}>
+            <Panel defaultSize={50} minSize={20}>
                 <PanelGroup direction="vertical">
-                  <Panel defaultSize={70} minSize={30}>
+                  <Panel defaultSize={55} minSize={30}>
                     <CodeEditorPanel
                       selectedLanguage={selectedLanguage}
                       code={code}
@@ -246,6 +247,12 @@ function SessionPage() {
 
                   <Panel defaultSize={30} minSize={15}>
                     <OutputPanel output={output} />
+                    
+                    {/* AI Hint */}
+                    <div style={{ background: '#00E5A015', border: '1px solid #00E5A030', borderRadius: '5px', padding: '6px 8px', margin: '8px' }}>
+                      <div style={{ fontSize: '9px', color: '#00E5A0', fontWeight: 500, marginBottom: '2px' }}>AI HINT</div>
+                      <div style={{ fontSize: '10px', color: '#7A8499' }}>Think about what complement each number needs...</div>
+                    </div>
                   </Panel>
                 </PanelGroup>
               </Panel>

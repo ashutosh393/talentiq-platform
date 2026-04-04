@@ -83,6 +83,13 @@ function Navbar() {
               <LayoutDashboardIcon />
               <span>Dashboard</span>
             </Link>
+            <Link to="/resume" className={`tiq-nav-link${isActive("/resume") ? " active" : ""}`} style={{ color: '#8B7CF6' }}>
+              <SparklesIcon size={16} />
+              <span>AI Interviews</span>
+            </Link>
+            <Link to="/profile" className={`tiq-nav-link${isActive("/profile") ? " active" : ""}`}>
+              <span>Profile</span>
+            </Link>
           </div>
 
           <div className="tiq-nav-right">
