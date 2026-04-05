@@ -71,36 +71,71 @@ export const seedPopularProblems = async () => {
             console.log(`Extracting details for: ${slug}...`);
             await delay(3000); // 3-second delay to evade ALFA API rate limits rendering HTML errors
 
-            const detailResponse = await fetch(`https://alfa-leetcode-api.onrender.com/select?titleSlug=${slug}`);
-            let detailData = null;
+            const graphQLQuery = {
+                operationName: "questionData",
+                variables: { titleSlug: slug },
+                query: `query questionData($titleSlug: String!) {
+                  question(titleSlug: $titleSlug) {
+                    title
+                    titleSlug
+                    content
+                    difficulty
+                    topicTags {
+                      name
+                    }
+                    codeSnippets {
+                      langSlug
+                      code
+                    }
+                  }
+                }`
+            };
+
+            const detailResponse = await fetch("https://leetcode.com/graphql", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+                },
+                body: JSON.stringify(graphQLQuery)
+            });
+
+            let gqlData = null;
             try {
-                detailData = await detailResponse.json();
+                gqlData = await detailResponse.json();
             } catch (err) {
                 console.warn(`Failed to parse response for ${slug}`);
                 continue;
             }
+            
+            const detailData = gqlData?.data?.question;
 
-            // Some premium questions might return null or error from ALFA.
-            if (!detailData || (!detailData.question && !detailData.questionTitle)) {
+            if (!detailData || !detailData.content) {
                 console.warn(`Could not extract problem details for: ${slug}. It might be premium-locked.`);
                 continue;
             }
 
+            // Extract snippets
+            const snippets = detailData.codeSnippets || [];
+            const jsSnippet = snippets.find(s => s.langSlug === "javascript")?.code || "/* Write your JavaScript solution here */";
+            const pySnippet = snippets.find(s => s.langSlug === "python3")?.code || snippets.find(s => s.langSlug === "python")?.code || "# Write your Python solution here";
+            const javaSnippet = snippets.find(s => s.langSlug === "java")?.code || "class Solution {\n    // Write your Java solution here \n}";
+
             const newProblem = new Problem({
                 id: detailData.titleSlug,
-                title: detailData.questionTitle,
+                title: detailData.title,
                 difficulty: detailData.difficulty,
                 category: (detailData.topicTags || []).map(t => t.name).join(" • "),
                 description: {
-                    text: detailData.question,
+                    text: detailData.content,
                     notes: []
                 },
                 examples: [], 
                 constraints: [], 
                 starterCode: {
-                    javascript: "/* Write your JavaScript solution here */",
-                    python: "# Write your Python solution here",
-                    java: "class Solution {\n    // Write your Java solution here \n}"
+                    javascript: jsSnippet,
+                    python: pySnippet,
+                    java: javaSnippet
                 }
             });
 

@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
-import { PROBLEMS } from "../data/problems";
 import Navbar from "../components/Navbar";
 
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
@@ -8,39 +7,53 @@ import ProblemDescription from "../components/ProblemDescription";
 import OutputPanel from "../components/OutputPanel";
 import CodeEditorPanel from "../components/CodeEditorPanel";
 import { executeCode } from "../lib/piston";
+import axiosInstance from "../lib/axios";
 
 import toast from "react-hot-toast";
 import confetti from "canvas-confetti";
+import { Loader2Icon, ArrowLeftIcon } from "lucide-react";
 
 function ProblemPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [currentProblemId, setCurrentProblemId] = useState("two-sum");
+  const [currentProblem, setCurrentProblem] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState(PROBLEMS[currentProblemId].starterCode.javascript);
+  const [code, setCode] = useState("");
   const [output, setOutput] = useState(null);
   const [isRunning, setIsRunning] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const currentProblem = PROBLEMS[currentProblemId];
-
-  // update problem when URL param changes
+  // fetch problem data when ID changes
   useEffect(() => {
-    if (id && PROBLEMS[id]) {
-      setCurrentProblemId(id);
-      setCode(PROBLEMS[id].starterCode[selectedLanguage]);
-      setOutput(null);
-    }
+    if (!id) return;
+    setIsLoading(true);
+    
+    axiosInstance.get(`/problems/${id}`)
+      .then(response => {
+        const data = response.data;
+        if (!data.error) {
+          setCurrentProblem(data);
+          setCode(data.starterCode?.[selectedLanguage] || "");
+        }
+      })
+      .catch(err => {
+        console.error("Error fetching problem:", err);
+        toast.error("Failed to load problem details.");
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
   }, [id, selectedLanguage]);
 
   const handleLanguageChange = (e) => {
     const newLang = e.target.value;
     setSelectedLanguage(newLang);
-    setCode(currentProblem.starterCode[newLang]);
+    if (currentProblem?.starterCode) {
+      setCode(currentProblem.starterCode[newLang] || "");
+    }
     setOutput(null);
   };
-
-  const handleProblemChange = (newProblemId) => navigate(`/problem/${newProblemId}`);
 
   const triggerConfetti = () => {
     confetti({
@@ -57,28 +70,19 @@ function ProblemPage() {
   };
 
   const normalizeOutput = (output) => {
-    // normalize output for comparison (trim whitespace, handle different spacing)
+    if (!output) return "";
     return output
       .trim()
       .split("\n")
       .map((line) =>
         line
           .trim()
-          // remove spaces after [ and before ]
           .replace(/\[\s+/g, "[")
           .replace(/\s+\]/g, "]")
-          // normalize spaces around commas to single space after comma
           .replace(/\s*,\s*/g, ",")
       )
       .filter((line) => line.length > 0)
       .join("\n");
-  };
-
-  const checkIfTestsPassed = (actualOutput, expectedOutput) => {
-    const normalizedActual = normalizeOutput(actualOutput);
-    const normalizedExpected = normalizeOutput(expectedOutput);
-
-    return normalizedActual == normalizedExpected;
   };
 
   const handleRunCode = async () => {
@@ -89,40 +93,70 @@ function ProblemPage() {
     setOutput(result);
     setIsRunning(false);
 
-    // check if code executed successfully and matches expected output
-
     if (result.success) {
-      const expectedOutput = currentProblem.expectedOutput[selectedLanguage];
-      const testsPassed = checkIfTestsPassed(result.output, expectedOutput);
-
-      if (testsPassed) {
-        triggerConfetti();
-        toast.success("All tests passed! Great job!");
+      const expectedOutput = currentProblem?.expectedOutput?.[selectedLanguage];
+      
+      // If we have strict expectedOutput (e.g. mock DB problems), test against it.
+      if (expectedOutput) {
+        const testsPassed = normalizeOutput(result.output) === normalizeOutput(expectedOutput);
+        if (testsPassed) {
+          triggerConfetti();
+          toast.success("All tests passed! Great job!");
+        } else {
+          toast.error("Tests failed. Check your output!");
+        }
       } else {
-        toast.error("Tests failed. Check your output!");
+        // If it's a dynamic problem without expectedOutput, just celebrate successful compilation
+        triggerConfetti();
+        toast.success("Code Executed Successfully!");
       }
     } else {
       toast.error("Code execution failed!");
     }
   };
 
+  if (isLoading) {
+    return (
+      <div className="h-screen bg-[#0A0C0F] flex flex-col items-center justify-center text-[#7A8499]">
+        <Loader2Icon className="w-8 h-8 animate-spin mb-4 text-[#00E5A0]" />
+        <p>Loading problem details from Database...</p>
+      </div>
+    );
+  }
+
+  if (!currentProblem) {
+    return (
+      <div className="h-screen bg-[#0A0C0F] flex flex-col items-center justify-center text-white">
+        <h1 className="text-2xl font-bold">Problem Not Found</h1>
+        <button onClick={() => navigate("/problems")} className="mt-4 text-[#00E5A0] hover:underline">
+          Return to Problems
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="h-screen bg-base-100 flex flex-col">
+    <div className="h-screen bg-[#0A0C0F] flex flex-col overflow-hidden">
       <Navbar />
 
-      <div className="flex-1">
+      <div className="flex-1 overflow-hidden">
         <PanelGroup direction="horizontal">
           {/* left panel- problem desc */}
           <Panel defaultSize={40} minSize={30}>
-            <ProblemDescription
-              problem={currentProblem}
-              currentProblemId={currentProblemId}
-              onProblemChange={handleProblemChange}
-              allProblems={Object.values(PROBLEMS)}
-            />
+            <div className="h-full bg-[#0A0C0F] overflow-y-auto w-full flex flex-col">
+               <div className="px-6 pt-4">
+                 <button onClick={() => navigate("/problems")} className="flex items-center gap-2 text-sm text-[#7A8499] hover:text-[#00E5A0] transition-colors font-medium">
+                   <ArrowLeftIcon className="w-4 h-4" />
+                   Back to Problems
+                 </button>
+               </div>
+               <div className="flex-1">
+                 <ProblemDescription problem={currentProblem} />
+               </div>
+            </div>
           </Panel>
 
-          <PanelResizeHandle className="w-2 bg-base-300 hover:bg-primary transition-colors cursor-col-resize" />
+          <PanelResizeHandle className="w-2 bg-[#161C28] hover:bg-[#00E5A0] transition-colors cursor-col-resize" />
 
           {/* right panel- code editor & output */}
           <Panel defaultSize={60} minSize={30}>
@@ -139,10 +173,9 @@ function ProblemPage() {
                 />
               </Panel>
 
-              <PanelResizeHandle className="h-2 bg-base-300 hover:bg-primary transition-colors cursor-row-resize" />
+              <PanelResizeHandle className="h-2 bg-[#161C28] hover:bg-[#00E5A0] transition-colors cursor-row-resize" />
 
               {/* Bottom panel - Output Panel*/}
-
               <Panel defaultSize={30} minSize={30}>
                 <OutputPanel output={output} />
               </Panel>
