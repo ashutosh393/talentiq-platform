@@ -87,6 +87,9 @@ function Navbar() {
               <SparklesIcon size={16} />
               <span>AI Interviews</span>
             </Link>
+            <Link to="/newsletter" className={`tiq-nav-link${isActive("/newsletter") ? " active" : ""}`}>
+              <span>Newsletter</span>
+            </Link>
             <Link to="/profile" className={`tiq-nav-link${isActive("/profile") ? " active" : ""}`}>
               <span>Profile</span>
             </Link>

@@ -11,6 +11,7 @@ import SessionRecapPage from "./pages/SessionRecapPage";
 import ProfilePage from "./pages/ProfilePage";
 import ResumePage from "./pages/ResumePage";
 import AIPracticePage from "./pages/AIPracticePage";
+import NewsletterPage from "./pages/NewsletterPage";
 
 function App() {
   const { isSignedIn, isLoaded } = useUser();
@@ -29,6 +30,7 @@ function App() {
         <Route path="/session/:id" element={isSignedIn ? <SessionPage /> : <Navigate to={"/"} />} />
         
         {/* NEW ROUTES */}
+        <Route path="/newsletter" element={isSignedIn ? <NewsletterPage /> : <Navigate to={"/"} />} />
         <Route path="/recap/:id" element={isSignedIn ? <SessionRecapPage /> : <Navigate to={"/"} />} />
         <Route path="/profile" element={isSignedIn ? <ProfilePage /> : <Navigate to={"/"} />} />
         <Route path="/resume" element={isSignedIn ? <ResumePage /> : <Navigate to={"/"} />} />

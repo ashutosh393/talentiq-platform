@@ -11,6 +11,7 @@ import { inngest, functions } from "./lib/inngest.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import sessionRoutes from "./routes/sessionRoute.js";
 import problemRoutes from "./routes/problemRoutes.js";
+import newsletterRoutes from "./routes/newsletterRoutes.js";
 import { protectRoute } from "./middleware/protectRoute.js";
 
 const app = express();
@@ -34,6 +35,7 @@ app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/problems", problemRoutes);
+app.use("/api/newsletter", newsletterRoutes);
 
 // CODE EXECUTION PROXY
 const LANGUAGE_MAP = {
@@ -83,6 +85,7 @@ app.get("/", (req, res) => {
 });
 
 import { autoFetchLeetCodeProblems } from "./lib/autoFetch.js";
+import { dispatchDailyNewsletter } from "./lib/newsletterCron.js";
 
 const startServer = async () => {
   try {
@@ -91,7 +94,10 @@ const startServer = async () => {
     
     // Kick off background auto-sync immediately, and then every 24 hours
     autoFetchLeetCodeProblems();
+    dispatchDailyNewsletter();
+    
     setInterval(autoFetchLeetCodeProblems, 24 * 60 * 60 * 1000); // 24 hours
+    setInterval(dispatchDailyNewsletter, 24 * 60 * 60 * 1000); // 24 hours
   } catch (error) {
     console.error("💥 Error starting the server", error);
   }
