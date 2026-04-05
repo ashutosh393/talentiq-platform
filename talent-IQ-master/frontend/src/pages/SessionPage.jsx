@@ -4,12 +4,14 @@ import { useNavigate, useParams } from "react-router";
 import { useEndSession, useJoinSession, useSessionById } from "../hooks/useSessions";
 import { PROBLEMS } from "../data/problems";
 import { executeCode } from "../lib/piston";
+import axiosInstance from "../lib/axios";
 import Navbar from "../components/Navbar";
 import { Panel, PanelGroup, PanelResizeHandle } from "react-resizable-panels";
 import { getDifficultyBadgeClass } from "../lib/utils";
 import { Loader2Icon, LogOutIcon, PhoneOffIcon } from "lucide-react";
 import CodeEditorPanel from "../components/CodeEditorPanel";
 import OutputPanel from "../components/OutputPanel";
+import ProblemDescription from "../components/ProblemDescription";
 
 import useStreamClient from "../hooks/useStreamClient";
 import { StreamCall, StreamVideo } from "@stream-io/video-react-sdk";
@@ -38,13 +40,28 @@ function SessionPage() {
     isParticipant
   );
 
-  // find the problem data based on session problem title
-  const problemData = session?.problem
-    ? Object.values(PROBLEMS).find((p) => p.title === session.problem)
-    : null;
-
+  const [problemData, setProblemData] = useState(null);
   const [selectedLanguage, setSelectedLanguage] = useState("javascript");
-  const [code, setCode] = useState(problemData?.starterCode?.[selectedLanguage] || "");
+  const [code, setCode] = useState("");
+
+  useEffect(() => {
+    if (!session?.problem) return;
+    
+    const slug = session.problem.toLowerCase().replace(/\s+/g, '-');
+    
+    axiosInstance.get(`/problems/${slug}`)
+      .then(response => {
+        const data = response.data;
+        if (!data.error) {
+          setProblemData(data);
+          const lang = "javascript"; // or whatever default
+          if (data.starterCode?.[lang]) {
+            setCode(data.starterCode[lang]);
+          }
+        }
+      })
+      .catch(err => console.error("Error fetching problem:", err));
+  }, [session?.problem]);
 
   // auto-join session if user is not already a participant and not the host
   useEffect(() => {
@@ -107,121 +124,43 @@ function SessionPage() {
             <PanelGroup direction="vertical">
               {/* PROBLEM DSC PANEL */}
               <Panel defaultSize={50} minSize={20}>
-                <div className="h-full overflow-y-auto bg-base-200">
-                  {/* HEADER SECTION */}
-                  <div className="p-6 bg-base-100 border-b border-base-300">
-                    <div className="flex items-start justify-between mb-3">
-                      <div>
-                        <h1 className="text-3xl font-bold text-base-content">
-                          {session?.problem || "Loading..."}
-                        </h1>
-                        {problemData?.category && (
-                          <p className="text-base-content/60 mt-1">{problemData.category}</p>
-                        )}
-                        <p className="text-base-content/60 mt-2">
-                          Host: {session?.host?.name || "Loading..."} •{" "}
-                          {session?.participant ? 2 : 1}/2 participants
-                        </p>
-                      </div>
-
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`badge badge-lg ${getDifficultyBadgeClass(
-                            session?.difficulty
-                          )}`}
+                <div className="h-full bg-[#0A0C0F] flex flex-col">
+                  {/* SESSION CONTROL HEADER */}
+                  <div className="px-6 py-3 bg-[#111520] border-b border-white/5 flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      {isHost && session?.status === "active" && (
+                        <button
+                          onClick={handleEndSession}
+                          disabled={endSessionMutation.isPending}
+                          className="btn btn-error btn-sm gap-2 rounded-md"
                         >
-                          {session?.difficulty.slice(0, 1).toUpperCase() +
-                            session?.difficulty.slice(1) || "Easy"}
-                        </span>
-                        {isHost && session?.status === "active" && (
-                          <button
-                            onClick={handleEndSession}
-                            disabled={endSessionMutation.isPending}
-                            className="btn btn-error btn-sm gap-2"
-                          >
-                            {endSessionMutation.isPending ? (
-                              <Loader2Icon className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <LogOutIcon className="w-4 h-4" />
-                            )}
-                            End Session
-                          </button>
-                        )}
-                        {session?.status === "completed" && (
-                          <span className="badge badge-ghost badge-lg">Completed</span>
-                        )}
-                      </div>
+                          {endSessionMutation.isPending ? (
+                            <Loader2Icon className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <LogOutIcon className="w-4 h-4" />
+                          )}
+                          End Session
+                        </button>
+                      )}
+                      {session?.status === "completed" && (
+                        <span className="badge badge-ghost badge-md">Completed</span>
+                      )}
+                    </div>
+                    
+                    <div className="text-xs text-[#7A8499] font-medium flex gap-3">
+                      <span>Host: {session?.host?.name || "Loading..."}</span>
+                      <span className="text-[#00E5A0">•</span>
+                      <span>{session?.participant ? 2 : 1}/2 participants</span>
                     </div>
                   </div>
 
-                  <div className="p-6 space-y-6">
-                    {/* problem desc */}
-                    {problemData?.description && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Description</h2>
-                        <div className="space-y-3 text-base leading-relaxed">
-                          <p className="text-base-content/90">{problemData.description.text}</p>
-                          {problemData.description.notes?.map((note, idx) => (
-                            <p key={idx} className="text-base-content/90">
-                              {note}
-                            </p>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* examples section */}
-                    {problemData?.examples && problemData.examples.length > 0 && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Examples</h2>
-
-                        <div className="space-y-4">
-                          {problemData.examples.map((example, idx) => (
-                            <div key={idx}>
-                              <div className="flex items-center gap-2 mb-2">
-                                <span className="badge badge-sm">{idx + 1}</span>
-                                <p className="font-semibold text-base-content">Example {idx + 1}</p>
-                              </div>
-                              <div className="bg-base-200 rounded-lg p-4 font-mono text-sm space-y-1.5">
-                                <div className="flex gap-2">
-                                  <span className="text-primary font-bold min-w-[70px]">
-                                    Input:
-                                  </span>
-                                  <span>{example.input}</span>
-                                </div>
-                                <div className="flex gap-2">
-                                  <span className="text-secondary font-bold min-w-[70px]">
-                                    Output:
-                                  </span>
-                                  <span>{example.output}</span>
-                                </div>
-                                {example.explanation && (
-                                  <div className="pt-2 border-t border-base-300 mt-2">
-                                    <span className="text-base-content/60 font-sans text-xs">
-                                      <span className="font-semibold">Explanation:</span>{" "}
-                                      {example.explanation}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Constraints */}
-                    {problemData?.constraints && problemData.constraints.length > 0 && (
-                      <div className="bg-base-100 rounded-xl shadow-sm p-5 border border-base-300">
-                        <h2 className="text-xl font-bold mb-4 text-base-content">Constraints</h2>
-                        <ul className="space-y-2 text-base-content/90">
-                          {problemData.constraints.map((constraint, idx) => (
-                            <li key={idx} className="flex gap-2">
-                              <span className="text-primary">•</span>
-                              <code className="text-sm">{constraint}</code>
-                            </li>
-                          ))}
-                        </ul>
+                  <div className="flex-1 overflow-y-auto">
+                    {problemData ? (
+                      <ProblemDescription problem={problemData} />
+                    ) : (
+                      <div className="h-full flex items-center justify-center p-8 text-[#A0ABC0] text-sm">
+                        <Loader2Icon className="w-6 h-6 animate-spin mb-2" />
+                        Loading problem data from engine...
                       </div>
                     )}
                   </div>

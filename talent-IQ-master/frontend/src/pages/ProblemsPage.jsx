@@ -1,5 +1,6 @@
 import { Link } from "react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axiosInstance from "../lib/axios";
 import Navbar from "../components/Navbar";
 import { PROBLEMS } from "../data/problems";
 import { getDifficultyColor } from "../lib/utils";
@@ -18,6 +19,24 @@ function ProblemsPage() {
   const [search, setSearch] = useState("");
   const [diffFilter, setDiffFilter] = useState("All");
   const [activeCompanies, setActiveCompanies] = useState([]);
+  const [problems, setProblems] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProblems = async () => {
+      try {
+        const response = await axiosInstance.get("/problems");
+        if (response.data) {
+          setProblems(response.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch problems:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProblems();
+  }, []);
 
   // Mock solved logic (assume problem 1 is solved)
   const isSolved = (id) => id === "1" || id === 1;
@@ -28,11 +47,10 @@ function ProblemsPage() {
     );
   };
 
-  const problems = Object.values(PROBLEMS).filter(p => {
+  const filteredProblems = problems.filter(p => {
     const matchSearch = p.title.toLowerCase().includes(search.toLowerCase());
     const matchDiff = diffFilter === "All" || p.difficulty === diffFilter;
-    // Basic company match simulation for frontend preview: just say meta on even, google on odd, or if problem has tags map them.
-    const matchCompany = activeCompanies.length === 0 || activeCompanies.includes("Google"); // Simplified for dummy display
+    const matchCompany = activeCompanies.length === 0 || activeCompanies.includes("Google"); 
     return matchSearch && matchDiff && matchCompany;
   });
 
@@ -115,27 +133,28 @@ function ProblemsPage() {
           </div>
 
           <div className="problems-col">
-            {problems.map((p, idx) => {
-              const diffCol = getDifficultyColor(p.difficulty);
-              const solved = isSolved(p.id);
-              return (
-                <Link key={p.id} to={`/problem/${p.id}`} className="problem-row">
-                  <span className="pr-number">#{p.id}</span>
-                  <span className="pr-title">{p.title}</span>
-                  <div className="pr-logos">
-                    {/* Display mock logos for visual presentation */}
-                    {idx % 2 === 0 ? COMPANIES[0].icon : null}
-                    {idx % 3 === 0 ? COMPANIES[1].icon : null}
-                    {idx % 5 === 0 ? COMPANIES[2].icon : null}
-                  </div>
-                  <span className="pr-diff" style={{ background: diffCol.bg, color: diffCol.text }}>{p.difficulty}</span>
-                  <span className="pr-status">{solved ? 'Solved ✓' : 'Try →'}</span>
-                </Link>
-              );
-            })}
-            
-            {problems.length === 0 && (
+            {isLoading ? (
+              <div style={{ padding: '40px', textAlign: 'center', color: '#7A8499' }}>Loading problems dynamically from Database engine...</div>
+            ) : filteredProblems.length === 0 ? (
               <div style={{ padding: '40px', textAlign: 'center', color: '#7A8499' }}>No problems match your filters.</div>
+            ) : (
+              filteredProblems.map((p, idx) => {
+                const diffCol = getDifficultyColor(p.difficulty);
+                const solved = isSolved(p.id);
+                return (
+                  <Link key={p.id} to={`/problem/${p.id}`} className="problem-row">
+                    <span className="pr-number">#{p.id || idx + 1}</span>
+                    <span className="pr-title">{p.title}</span>
+                    <div className="pr-logos">
+                      {idx % 2 === 0 ? COMPANIES[0].icon : null}
+                      {idx % 3 === 0 ? COMPANIES[1].icon : null}
+                      {idx % 5 === 0 ? COMPANIES[2].icon : null}
+                    </div>
+                    <span className="pr-diff" style={{ background: diffCol.bg, color: diffCol.text }}>{p.difficulty}</span>
+                    <span className="pr-status">{solved ? 'Solved ✓' : 'Try →'}</span>
+                  </Link>
+                );
+              })
             )}
           </div>
         </div>

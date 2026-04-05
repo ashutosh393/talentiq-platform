@@ -10,6 +10,7 @@ import { inngest, functions } from "./lib/inngest.js";
 
 import chatRoutes from "./routes/chatRoutes.js";
 import sessionRoutes from "./routes/sessionRoute.js";
+import problemRoutes from "./routes/problemRoutes.js";
 import { protectRoute } from "./middleware/protectRoute.js";
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(clerkMiddleware());
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/chat", chatRoutes);
 app.use("/api/sessions", sessionRoutes);
+app.use("/api/problems", problemRoutes);
 
 // CODE EXECUTION PROXY
 const LANGUAGE_MAP = {
