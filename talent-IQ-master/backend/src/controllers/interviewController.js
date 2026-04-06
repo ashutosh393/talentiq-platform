@@ -3,8 +3,10 @@ import {
   generateInterviewQuestions,
   generateFollowUp,
   evaluateInterview,
+  transcribeAudio
 } from "../lib/ai.js";
 import User from "../models/User.js";
+import fs from "fs";
 import Session from "../models/Session.js";
 import Problem from "../models/Problem.js";
 
@@ -71,13 +73,29 @@ export async function parseResume(req, res) {
 // ─── FOLLOW-UP CHAT ──────────────────────────────────────────────────────────
 export async function chatFollowUp(req, res) {
   try {
-    const { question, answer, isSkipped } = req.body;
+    const { question, isSkipped } = req.body;
+    let answer = req.body.answer;
+
     if (!question) {
+      if (req.file) fs.unlinkSync(req.file.path);
       return res.status(400).json({ message: "Question is required" });
     }
+
+    // If an audio file was uploaded, use Groq Whisper to transcribe it
+    if (req.file) {
+      try {
+        answer = await transcribeAudio(req.file.path);
+      } finally {
+        // ALWAYS clean up the temporary disk file
+        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      }
+    }
+
     const result = await generateFollowUp(question, answer, isSkipped);
-    res.json(result);
+    // Attach the actual transcribed answer so the frontend can populate its UI accurately
+    res.json({ ...result, transcribedAnswer: answer });
   } catch (error) {
+    if (req.file && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     console.error("Error in chatFollowUp:", error.message);
     res.status(500).json({ message: error.message || "Failed to generate follow-up" });
   }

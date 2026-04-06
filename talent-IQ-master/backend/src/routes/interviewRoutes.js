@@ -13,7 +13,7 @@ import {
 const router = express.Router();
 
 // Multer — store PDF in memory (max 10 MB)
-const upload = multer({
+const uploadMemory = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
@@ -25,11 +25,20 @@ const upload = multer({
   },
 });
 
-// Resume upload & question generation
-router.post("/parse-resume", protectRoute, upload.single("resume"), parseResume);
+// Multer — store Audio temporarily on disk for Groq SDK
+const uploadDisk = multer({
+  dest: "uploads/",
+  limits: { fileSize: 20 * 1024 * 1024 },
+});
 
-// Per-answer AI follow-up
+// Resume upload & question generation
+router.post("/parse-resume", protectRoute, uploadMemory.single("resume"), parseResume);
+
+// Per-answer AI follow-up (Text only)
 router.post("/chat", protectRoute, chatFollowUp);
+
+// Per-answer AI follow-up (Audio transcribed via Groq)
+router.post("/chat/audio", protectRoute, uploadDisk.single("audio"), chatFollowUp);
 
 // End-of-interview evaluation
 router.post("/evaluate", protectRoute, evaluateSession);

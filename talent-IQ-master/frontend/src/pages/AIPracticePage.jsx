@@ -39,11 +39,14 @@ function AIPracticePage() {
   const [evaluation, setEvaluation] = useState(null);
   const [evaluating, setEvaluating] = useState(false);
 
-  // Voice AI State
-  const [isListening, setIsListening] = useState(false);
+  // Voice AI State & Sequencing
+  const [intPhase, setIntPhase] = useState("ai-speaking"); // "ai-speaking" | "thinking" | "recording" | "submitting"
+  const [timeLeft, setTimeLeft] = useState(60);
   const [aiSpeaking, setAiSpeaking] = useState(false);
-  const recognitionRef = useRef(null);
+  
   const synthRef = useRef(window.speechSynthesis);
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
 
   const chatBottomRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -55,39 +58,24 @@ function AIPracticePage() {
     }
   }, [answers, followUpText, currentQIndex]);
 
-  // Setup Web Speech API (Speech-to-Text)
+  // State Timer for Thinking Phase
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = true;
-      recognition.interimResults = true;
-      recognition.lang = "en-US";
-
-      recognition.onresult = (event) => {
-        let final = "";
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-          if (event.results[i].isFinal) {
-            final += event.results[i][0].transcript;
-          }
-        }
-        if (final) {
-          setInputText((prev) => prev + (prev.endsWith(" ") || prev === "" ? "" : " ") + final);
-        }
-      };
-
-      recognition.onerror = (e) => {
-        console.error("Speech reco error:", e);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => setIsListening(false);
-      recognitionRef.current = recognition;
+    let interval;
+    if (intPhase === "thinking" && timeLeft > 0) {
+      interval = setInterval(() => setTimeLeft((p) => p - 1), 1000);
+    } else if (intPhase === "thinking" && timeLeft === 0) {
+      startRecording();
     }
-    
-    // Stop speaking when leaving page
+    return () => clearInterval(interval);
+  }, [intPhase, timeLeft]);
+
+  // Clean up Audio on unmount
+  useEffect(() => {
     return () => {
       synthRef.current?.cancel();
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      }
     };
   }, []);
 
@@ -105,33 +93,57 @@ function AIPracticePage() {
       if (preferred) utterance.voice = preferred;
       
       utterance.onstart = () => setAiSpeaking(true);
-      utterance.onend = () => setAiSpeaking(false);
-      utterance.onerror = () => setAiSpeaking(false);
+      // Start thinking phase right after telling the question
+      utterance.onend = () => {
+        setAiSpeaking(false);
+        if (intPhase === "ai-speaking") {
+           setTimeLeft(60);
+           setIntPhase("thinking");
+        }
+      };
+      utterance.onerror = () => {
+        setAiSpeaking(false);
+        if (intPhase === "ai-speaking") {
+           setTimeLeft(60);
+           setIntPhase("thinking");
+        }
+      };
       
       synthRef.current.speak(utterance);
     }, 50);
   };
 
-  const toggleListening = () => {
-    if (isListening) {
-      recognitionRef.current?.stop();
-    } else {
-      synthRef.current?.cancel(); // Mute AI so it doesn't record itself
-      recognitionRef.current?.start();
-      setIsListening(true);
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream, { mimeType: 'audio/webm' });
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start();
+      setIntPhase("recording");
+    } catch (err) {
+      console.error("Mic access denied or error:", err);
+      alert("Microphone access is strictly required to answer questions using Voice. Make sure you allow microphone access.");
     }
   };
 
   // Trigger initial AI voice when interview starts
   useEffect(() => {
     if (phase === PHASE.INTERVIEW && questions.length > 0 && currentQIndex === 0 && !answers[questions[0].id]) {
+       setIntPhase("ai-speaking");
        speakText(`Welcome to your mock interview. Let's begin. Question 1. ${questions[0].question}`);
     }
   }, [phase]);
 
   // Trigger voice on next question
   useEffect(() => {
-     if (phase === PHASE.INTERVIEW && currentQIndex > 0 && questions[currentQIndex]) {
+     if (phase === PHASE.INTERVIEW && currentQIndex > 0 && questions[currentQIndex] && !answers[questions[currentQIndex].id]) {
+       setIntPhase("ai-speaking");
        speakText(`Question ${currentQIndex + 1}. ${questions[currentQIndex].question}`);
      }
   }, [currentQIndex]);
@@ -175,40 +187,73 @@ function AIPracticePage() {
   const totalQ = questions.length;
   const answeredCount = Object.keys(answers).length;
 
-  const submitAnswer = async (isSkipped = false) => {
-    if (!isSkipped && !inputText.trim()) return;
-
-    const answer = isSkipped ? "" : inputText.trim();
+  const submitAnswer = async (isSkipped = false, audioBlob = null) => {
     setIsLoading(true);
     setShowFollowUp(false);
-    setInputText("");
+    setIntPhase("submitting");
 
     try {
-      const res = await axios.post(`/interview/chat`, {
-        question: currentQ.question,
-        answer,
-        isSkipped,
-      }, { withCredentials: true });
+      let res;
+      if (audioBlob && !isSkipped) {
+        const formData = new FormData();
+        formData.append("question", currentQ.question);
+        formData.append("isSkipped", "false");
+        formData.append("audio", audioBlob, "answer.webm");
+
+        res = await axios.post(`/interview/chat/audio`, formData, { 
+          headers: { "Content-Type": "multipart/form-data" },
+          withCredentials: true 
+        });
+      } else {
+        res = await axios.post(`/interview/chat`, {
+          question: currentQ.question,
+          answer: "",
+          isSkipped,
+        }, { withCredentials: true });
+      }
+
       const followUp = res.data.followUp;
+      const finalTranscribed = res.data.transcribedAnswer || (isSkipped ? "" : "Audio Answer Tracked.");
 
       setAnswers((prev) => ({
         ...prev,
-        [currentQ.id]: { answer, followUp, skipped: isSkipped },
+        [currentQ.id]: { answer: finalTranscribed, followUp, skipped: isSkipped },
       }));
       setFollowUpText(followUp);
       setShowFollowUp(true);
-      if (isListening) toggleListening(); // Auto-stop listening
+      setIntPhase("ai-speaking");
       speakText(followUp);
     } catch {
       setAnswers((prev) => ({
         ...prev,
-        [currentQ.id]: { answer, followUp: "Let's continue.", skipped: isSkipped },
+        [currentQ.id]: { answer: isSkipped ? "" : "Failed to parse audio.", followUp: "Let's continue.", skipped: isSkipped },
       }));
       setFollowUpText("Let's continue.");
       setShowFollowUp(true);
+      setIntPhase("ai-speaking");
       speakText("Let's continue.");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleStopAndSubmit = (isSkipped = false) => {
+    if (isSkipped) {
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+        mediaRecorderRef.current.stop();
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      }
+      submitAnswer(true, null);
+      return;
+    }
+
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+      mediaRecorderRef.current.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+        submitAnswer(false, audioBlob);
+      };
+      mediaRecorderRef.current.stop();
     }
   };
 
@@ -339,13 +384,17 @@ function AIPracticePage() {
         .btn-skip { padding: 11px 16px; background: transparent; border: 1px solid #ffffff20; border-radius: 8px; color: #7A8499; font-size: 13px; cursor: pointer; font-family: 'DM Sans', sans-serif; transition: 0.2s; }
         .btn-skip:hover { border-color: #F87171; color: #F87171; }
         
-        .btn-mic { padding: 11px; background: transparent; border: 1px solid #ffffff20; border-radius: 8px; color: #EEF2FF; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center; width: 44px; }
-        .btn-mic:hover { border-color: #F87171; color: #F87171; background: #F8717110; }
-        .btn-mic.recording { background: #F8717115; border-color: #F87171; color: #F87171; animation: micPulse 1.5s infinite; }
-        @keyframes micPulse {
-          0% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0.4); }
-          70% { box-shadow: 0 0 0 10px rgba(248, 113, 113, 0); }
-          100% { box-shadow: 0 0 0 0 rgba(248, 113, 113, 0); }
+        /* ── Strict Voice AI Styling ── */
+        .seq-card { padding: 20px; background: #161C28; border: 1px solid #ffffff12; border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 140px; text-align: center; }
+        .seq-title { font-size: 14px; font-weight: 600; color: #EEF2FF; margin-bottom: 8px; }
+        .seq-sub { font-size: 13px; color: #7A8499; }
+        .timer-display { font-family: 'JetBrains Mono', monospace; font-size: 32px; font-weight: 700; margin: 12px 0; color: #F59E0B; }
+        .recording-banner { background: #F8717115; border: 1px solid #F8717140; color: #F87171; border-radius: 8px; padding: 12px 20px; font-size: 15px; font-weight: 700; width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px; animation: recPulse 2s infinite; }
+        .rec-dot { width: 10px; height: 10px; background: #F87171; border-radius: 50%; box-shadow: 0 0 8px #F87171; }
+        
+        @keyframes recPulse {
+          0%, 100% { border-color: #F8717140; box-shadow: 0 0 0 transparent; }
+          50% { border-color: #F8717180; box-shadow: 0 0 15px #F8717120; }
         }
         
         .ai-avatar.speaking { animation: pulseAi 1.5s infinite; border-color: #00E5A0; box-shadow: 0 0 12px #00E5A040; }
@@ -660,39 +709,50 @@ function AIPracticePage() {
                     <div ref={chatBottomRef} />
                   </div>
 
-                  {/* Input area */}
+                  {/* Strict Input Sequence area */}
                   <div className="int-input-area">
                     {!answers[currentQ?.id] ? (
                       <>
-                        <textarea
-                          className="int-input"
-                          placeholder="Type your answer here... (be as detailed as you can)"
-                          value={inputText}
-                          onChange={(e) => setInputText(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter" && !e.shiftKey) {
-                              e.preventDefault();
-                              submitAnswer(false);
-                            }
-                          }}
-                          disabled={isLoading}
-                        />
-                        <div className="int-actions">
-                          <button 
-                            className={`btn-mic ${isListening ? "recording" : ""}`} 
-                            title={isListening ? "Stop Recording" : "Speak Answer"}
-                            onClick={toggleListening} 
-                            disabled={isLoading}
-                          >
-                            {isListening ? "⏹" : "🎤"}
-                          </button>
-                          <button className="btn-skip" onClick={() => submitAnswer(true)} disabled={isLoading || isListening}>
-                            Skip →
-                          </button>
-                          <button className="btn-submit" onClick={() => submitAnswer(false)} disabled={isLoading || isListening || !inputText.trim()}>
-                            {isLoading ? "Thinking..." : "Submit Answer"}
-                          </button>
-                        </div>
+                        {intPhase === "ai-speaking" && (
+                          <div className="seq-card">
+                            <div className="seq-title">AI is speaking...</div>
+                            <div className="seq-sub">Please listen to the question. The mic will open soon.</div>
+                            <div style={{ marginTop: 14 }}>
+                              <button className="btn-skip" onClick={() => handleStopAndSubmit(true)}>Skip Question →</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {intPhase === "thinking" && (
+                          <div className="seq-card">
+                            <div className="seq-title">Thinking Time</div>
+                            <div className="timer-display">00:{timeLeft.toString().padStart(2, '0')}</div>
+                            <div className="seq-sub">Prepare your answer. Recording begins automatically at 00:00.</div>
+                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 16 }}>
+                              <button className="btn-skip" onClick={() => handleStopAndSubmit(true)}>Skip →</button>
+                              <button className="btn-submit" onClick={startRecording}>Skip Time & Record Now</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {intPhase === "recording" && (
+                          <div className="seq-card">
+                            <div className="recording-banner">
+                              <span className="rec-dot"></span> LIVE REC — Speak your answer...
+                            </div>
+                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 16, width: "100%" }}>
+                              <button className="btn-skip" onClick={() => handleStopAndSubmit(true)}>Skip →</button>
+                              <button className="btn-finish" style={{ flex: "none", width: "200px" }} onClick={() => handleStopAndSubmit(false)}>Submit Answer</button>
+                            </div>
+                          </div>
+                        )}
+
+                        {intPhase === "submitting" && (
+                          <div className="seq-card">
+                            <div className="typing"><span /><span /><span /></div>
+                            <div className="seq-title" style={{ marginTop: 16 }}>Transcribing & Evaluating via Grok...</div>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div className="int-actions">

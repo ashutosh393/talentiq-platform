@@ -1,4 +1,5 @@
 import Groq from "groq-sdk";
+import fs from "fs";
 import { ENV } from "./env.js";
 
 const groq = new Groq({ apiKey: ENV.GROQ_API_KEY });
@@ -129,5 +130,23 @@ Provide a comprehensive evaluation. Respond ONLY with valid JSON (no markdown fe
     return JSON.parse(text);
   } catch {
     throw new Error("Failed to parse evaluation response");
+  }
+}
+
+/**
+ * Transcribe an audio file using Groq Whisper
+ */
+export async function transcribeAudio(audioFilePath) {
+  try {
+    const transcription = await groq.audio.transcriptions.create({
+      file: fs.createReadStream(audioFilePath),
+      model: "whisper-large-v3-turbo",
+      response_format: "json",
+      language: "en"
+    });
+    return transcription.text;
+  } catch (err) {
+    console.error("Groq Whisper error:", err);
+    throw new Error("Failed to transcribe audio.");
   }
 }
