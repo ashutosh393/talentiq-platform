@@ -1,8 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import Groq from "groq-sdk";
 import { ENV } from "./env.js";
 
-const genAI = new GoogleGenerativeAI(ENV.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.5-pro" });
+const groq = new Groq({ apiKey: ENV.GROQ_API_KEY });
+const MODEL = "llama-3.3-70b-versatile"; // High performance, extremely fast on Groq
 
 /**
  * Parse resume text and generate tailored interview questions + extract skills
@@ -19,29 +19,28 @@ ${resumeText}
 
 Respond ONLY with valid JSON in this exact format (no markdown fences):
 {
-  "skills": ["skill1", "skill2", ...],
+  "skills": ["skill1", "skill2"],
   "questions": [
-    { "id": 1, "question": "...", "category": "Technical|Behavioral|Project", "difficulty": "Easy|Medium|Hard" },
-    ...
+    { "id": 1, "question": "...", "category": "Technical|Behavioral|Project", "difficulty": "Easy|Medium|Hard" }
   ],
   "resumeScore": 72
 }
 
 resumeScore is a number 0-100 rating the strength of the resume.`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
+  const result = await groq.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    model: MODEL,
+    temperature: 0.3,
+    response_format: { type: "json_object" }
+  });
 
-  // Strip markdown code fences if present
-  const cleaned = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
-
+  const text = result.choices[0]?.message?.content || "{}";
+  
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(text);
   } catch {
-    // Try to extract JSON from the text
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error("Failed to parse Gemini response as JSON");
+    throw new Error("Failed to parse AI response as JSON");
   }
 }
 
@@ -63,11 +62,16 @@ Candidate's Answer: "${answer}"
 Respond ONLY with valid JSON (no markdown):
 { "followUp": "..." }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const cleaned = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
   try {
-    return JSON.parse(cleaned);
+    const result = await groq.chat.completions.create({
+      messages: [{ role: "user", content: prompt }],
+      model: MODEL,
+      temperature: 0.7,
+      response_format: { type: "json_object" },
+      max_tokens: 150
+    });
+    
+    return JSON.parse(result.choices[0]?.message?.content || '{"followUp": ""}');
   } catch {
     return { followUp: "Thank you for your answer. Let's continue." };
   }
@@ -113,14 +117,17 @@ Provide a comprehensive evaluation. Respond ONLY with valid JSON (no markdown fe
   "hiringRecommendation": "Strong Consider|Consider|Needs Work|Not Ready"
 }`;
 
-  const result = await model.generateContent(prompt);
-  const text = result.response.text().trim();
-  const cleaned = text.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+  const result = await groq.chat.completions.create({
+    messages: [{ role: "user", content: prompt }],
+    model: MODEL,
+    temperature: 0.3,
+    response_format: { type: "json_object" }
+  });
+  
+  const text = result.choices[0]?.message?.content || "{}";
   try {
-    return JSON.parse(cleaned);
+    return JSON.parse(text);
   } catch {
-    const match = cleaned.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
     throw new Error("Failed to parse evaluation response");
   }
 }

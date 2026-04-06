@@ -14,7 +14,7 @@ export const ENV = {
   CLERK_SECRET_KEY: process.env.CLERK_SECRET_KEY,       
   CLERK_PUBLISHABLE_KEY: process.env.CLERK_PUBLISHABLE_KEY,
   ONECOMPILER_API_KEY: process.env.ONECOMPILER_API_KEY,
-  GEMINI_API_KEY: process.env.GEMINI_API_KEY,
+  GROQ_API_KEY: process.env.GROQ_API_KEY || "",
   ADZUNA_APP_ID: process.env.ADZUNA_APP_ID,
   ADZUNA_APP_KEY: process.env.ADZUNA_APP_KEY,
 };

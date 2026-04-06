@@ -16,7 +16,7 @@ export const fetchJobs = async () => {
         // Fetch jobs in India ('in'), max 3 days old, sort by date
         // 'what' = software developer fresher/junior/intern
         // 'what_exclude' = senior, lead, principal, manager
-        const url = `https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${appKey}&what=software%20developer%20fresher%20junior%20intern&what_exclude=senior%20lead%20principal%20manager&max_days_old=3&results_per_page=10&sort_by=date`;
+        const url = `https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${appKey}&what_and=software&what_or=intern%20fresher%20junior%20analyst%20sde%20trainee&what_exclude=senior%20lead%20principal%20manager%20experience%20experienced%20ii%20iii%20iv&max_days_old=7&results_per_page=10&sort_by=date`;
         
         const res = await fetch(url);
         const data = await res.json();

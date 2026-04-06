@@ -3,7 +3,7 @@ import {
   generateInterviewQuestions,
   generateFollowUp,
   evaluateInterview,
-} from "../lib/gemini.js";
+} from "../lib/ai.js";
 import User from "../models/User.js";
 import Session from "../models/Session.js";
 import Problem from "../models/Problem.js";
