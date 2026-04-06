@@ -12,6 +12,7 @@ import chatRoutes from "./routes/chatRoutes.js";
 import sessionRoutes from "./routes/sessionRoute.js";
 import problemRoutes from "./routes/problemRoutes.js";
 import newsletterRoutes from "./routes/newsletterRoutes.js";
+import interviewRoutes from "./routes/interviewRoutes.js";
 import { protectRoute } from "./middleware/protectRoute.js";
 
 const app = express();
@@ -36,6 +37,7 @@ app.use("/api/chat", chatRoutes);
 app.use("/api/sessions", sessionRoutes);
 app.use("/api/problems", problemRoutes);
 app.use("/api/newsletter", newsletterRoutes);
+app.use("/api/interview", interviewRoutes);
 
 // CODE EXECUTION PROXY
 const LANGUAGE_MAP = {

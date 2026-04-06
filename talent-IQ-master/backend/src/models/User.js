@@ -20,6 +20,23 @@ const userSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
+    // Extended profile fields
+    education: {
+      type: String,
+      default: "",
+    },
+    bio: {
+      type: String,
+      default: "",
+    },
+    skills: {
+      type: [String],
+      default: [],
+    },
+    resumeText: {
+      type: String,
+      default: "",
+    },
   },
   { timestamps: true } // createdAt, updatedAt
 );
