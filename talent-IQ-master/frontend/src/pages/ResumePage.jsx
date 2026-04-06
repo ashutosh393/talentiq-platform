@@ -1,9 +1,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
+import axios from "../lib/axios";
 
 function ResumePage() {
   const navigate = useNavigate();
@@ -40,8 +38,7 @@ function ResumePage() {
     try {
       const formData = new FormData();
       formData.append("resume", file);
-      const res = await axios.post(`${API}/api/interview/parse-resume`, formData, {
-        withCredentials: true,
+      const res = await axios.post(`/interview/parse-resume`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setResumeScore(res.data.resumeScore);

@@ -1,7 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
-
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5001';
+import axios from '../lib/axios';
 
 // Color per skill source
 const SOURCE_COLOR = {
@@ -17,8 +15,7 @@ function SkillsRadar() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    axios
-      .get(`${API}/api/interview/skills-radar`, { withCredentials: true })
+    axios.get(`/interview/skills-radar`)
       .then((res) => {
         setSkills((res.data.skills || []).slice(0, MAX_SKILLS));
         setSessionCount(res.data.sessionCount || 0);

@@ -2,9 +2,7 @@ import React, { useState, useEffect } from "react";
 import Navbar from "../components/Navbar";
 import { generateActivityHeatmap, ACHIEVEMENTS } from "../lib/utils";
 import { useUser } from "@clerk/clerk-react";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
+import axios from "../lib/axios";
 
 // ── Tag color palette (cycles) ────────────────────────────────────────────────
 const CHIP_COLORS = [
@@ -49,7 +47,7 @@ function ProfilePage() {
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        const res = await axios.get(`${API}/api/interview/profile`, { withCredentials: true });
+        const res = await axios.get(`/interview/profile`);
         setProfile({
           name: res.data.name || profile.name,
           education: res.data.education || profile.education,
@@ -97,11 +95,9 @@ function ProfilePage() {
     setSaving(true);
     setSaveError("");
     try {
-      const res = await axios.patch(
-        `${API}/api/interview/profile`,
-        { name: editForm.name, education: editForm.education, bio: editForm.bio, skills: editForm.skills },
-        { withCredentials: true }
-      );
+      const res = await axios.patch(`/interview/profile`, {
+        name: editForm.name, education: editForm.education, bio: editForm.bio, skills: editForm.skills 
+      });
       setProfile({
         name: res.data.name,
         education: res.data.education,

@@ -2,9 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router";
 import Navbar from "../components/Navbar";
 import { useUser } from "@clerk/clerk-react";
-import axios from "axios";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:5001";
+import axios from "../lib/axios";
 
 // ─── Phase constants ──────────────────────────────────────────────────────────
 const PHASE = { UPLOAD: "upload", READY: "ready", INTERVIEW: "interview", EVALUATION: "evaluation" };
@@ -63,8 +61,7 @@ function AIPracticePage() {
     try {
       const formData = new FormData();
       formData.append("resume", file);
-      const res = await axios.post(`${API}/api/interview/parse-resume`, formData, {
-        withCredentials: true,
+      const res = await axios.post(`/interview/parse-resume`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       setQuestions(res.data.questions);
@@ -100,11 +97,11 @@ function AIPracticePage() {
     setInputText("");
 
     try {
-      const res = await axios.post(
-        `${API}/api/interview/chat`,
-        { question: currentQ.question, answer, isSkipped },
-        { withCredentials: true }
-      );
+      const res = await axios.post(`/interview/chat`, {
+        question: currentQ.question,
+        answer,
+        isSkipped,
+      }, { withCredentials: true });
       const followUp = res.data.followUp;
 
       setAnswers((prev) => ({
@@ -149,11 +146,7 @@ function AIPracticePage() {
           skipped: a?.skipped || !a,
         };
       });
-      const res = await axios.post(
-        `${API}/api/interview/evaluate`,
-        { qaList },
-        { withCredentials: true }
-      );
+      const res = await axios.post(`/interview/evaluate`, { qaList }, { timeout: 30000 });
       setEvaluation(res.data);
     } catch {
       setEvaluation({
