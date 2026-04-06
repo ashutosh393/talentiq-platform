@@ -96,10 +96,16 @@ const startServer = async () => {
     
     // Kick off background auto-sync immediately, and then every 24 hours
     autoFetchLeetCodeProblems();
-    dispatchDailyNewsletter();
-    
     setInterval(autoFetchLeetCodeProblems, 24 * 60 * 60 * 1000); // 24 hours
-    setInterval(dispatchDailyNewsletter, 24 * 60 * 60 * 1000); // 24 hours
+
+    // Run newsletter daily at 8 AM and 8 PM (server time)
+    setInterval(() => {
+      const now = new Date();
+      // Runs at minute 0 when hour is 8 or 20 (8 AM / 8 PM)
+      if (now.getMinutes() === 0 && (now.getHours() === 8 || now.getHours() === 20)) {
+        dispatchDailyNewsletter();
+      }
+    }, 60 * 1000); // check every minute
   } catch (error) {
     console.error("💥 Error starting the server", error);
   }

@@ -2,39 +2,39 @@ import fetch from "node-fetch";
 import nodemailer from "nodemailer";
 import Subscriber from "../models/Subscriber.js";
 
-// Fetch remote software engineering jobs using Remotive zero-auth API
+// Fetch fresher software engineering jobs in India using Adzuna API
 export const fetchJobs = async () => {
     try {
-        // Fetch a larger batch so we can aggressively filter them locally for freshers
-        const res = await fetch("https://remotive.com/api/remote-jobs?category=software-dev&limit=100");
+        const appId = process.env.ADZUNA_APP_ID;
+        const appKey = process.env.ADZUNA_APP_KEY;
+        
+        if (!appId || !appKey) {
+            console.log("⚠️ ADZUNA_APP_ID or ADZUNA_APP_KEY not set in .env. Skipping job fetch.");
+            return [];
+        }
+
+        // Fetch jobs in India ('in'), max 3 days old, sort by date
+        // 'what' = software developer fresher/junior/intern
+        // 'what_exclude' = senior, lead, principal, manager
+        const url = `https://api.adzuna.com/v1/api/jobs/in/search/1?app_id=${appId}&app_key=${appKey}&what=software%20developer%20fresher%20junior%20intern&what_exclude=senior%20lead%20principal%20manager&max_days_old=3&results_per_page=10&sort_by=date`;
+        
+        const res = await fetch(url);
         const data = await res.json();
         
-        const jobs = data.jobs || [];
+        const jobs = data.results || [];
 
-        // Strict rejection list for experienced roles
-        const seniorKeywords = ["senior", "lead", "sr", "principal", "staff", "manager", "director", "head", "architect", "experienced"];
-        
-        // Strict inclusion list for freshers
-        const fresherKeywords = ["junior", "jr", "entry", "intern", "graduate", "fresher", "trainee", "associate"];
+        // Adzuna maps fields differently from Remotive
+        const formattedJobs = jobs.map(job => ({
+            title: job.title,
+            url: job.redirect_url,
+            company_name: job.company?.display_name || "Unknown Company",
+            job_type: job.contract_time || (job.contract_type === "contract" ? "Contract" : "Full Time")
+        }));
 
-        const fresherJobs = jobs.filter(job => {
-            const titleLower = job.title.toLowerCase();
-            
-            // 1. Instantly reject any role that contains a senior keyword
-            const isSenior = seniorKeywords.some(keyword => titleLower.includes(keyword));
-            if (isSenior) return false;
-
-            // 2. Either explicitly require a fresher keyword OR just accept un-tagged standard roles 
-            // (To strictly guarantee fresher jobs, we will force it to match our fresher inclusion list)
-            const isFresher = fresherKeywords.some(keyword => titleLower.includes(keyword));
-            
-            return isFresher;
-        });
-
-        // Return only the top 5 freshest junior-level jobs
-        return fresherJobs.slice(0, 5);
+        // Return top 5 freshest jobs
+        return formattedJobs.slice(0, 5);
     } catch (e) {
-        console.error("Failed fetching dev jobs:", e);
+        console.error("Failed fetching fresher jobs from Adzuna:", e);
         return [];
     }
 };
