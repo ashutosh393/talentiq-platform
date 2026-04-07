@@ -13,14 +13,16 @@ export const autoFetchLeetCodeProblems = async () => {
         console.log(`🔄 Starting Auto-Fetch cycle. (Targeting ${FETCH_LIMIT} problems with a ${RATE_DELAY_MS}ms rate-limit gap)`);
 
         // Use Official LeetCode GraphQL to fetch the raw list.
-        // This avoids the 429 'Too Many Requests' IP ban from free Alfa-Render instances
+        // We use a random 'skip' offset so it doesn't repeatedly fetch the exact same 10 classic problems.
+        const randomSkip = Math.floor(Math.random() * 2000); // LeetCode has ~3000 problems
+
         const listQuery = {
             query: `query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) { 
               questionList( categorySlug: $categorySlug limit: $limit skip: $skip filters: $filters ) { 
                 data { titleSlug difficulty } 
               } 
             }`,
-            variables: { categorySlug: "", skip: 0, limit: FETCH_LIMIT, filters: {} }
+            variables: { categorySlug: "", skip: randomSkip, limit: FETCH_LIMIT, filters: {} }
         };
 
         const listResponse = await fetch("https://leetcode.com/graphql", {
