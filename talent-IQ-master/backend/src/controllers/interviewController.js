@@ -73,7 +73,8 @@ export async function parseResume(req, res) {
 // ─── FOLLOW-UP CHAT ──────────────────────────────────────────────────────────
 export async function chatFollowUp(req, res) {
   try {
-    const { question, isSkipped } = req.body;
+    const rawSkipped = req.body.isSkipped;
+    const isSkipped = rawSkipped === "true" || rawSkipped === true;
     let answer = req.body.answer;
 
     if (!question) {
@@ -83,15 +84,23 @@ export async function chatFollowUp(req, res) {
 
     // If an audio file was uploaded, use Groq Whisper to transcribe it
     if (req.file) {
+      // Multer strips file extensions in its temp paths. Groq's SDK strictly requires
+      // the filepath to contain a valid audio extension (e.g. .wav) to parse correctly.
+      const newPath = req.file.path + ".wav";
+      fs.renameSync(req.file.path, newPath);
+
       try {
-        answer = await transcribeAudio(req.file.path);
+        answer = await transcribeAudio(newPath);
+      } catch (audioErr) {
+        console.error("Transcription explicitly failed:", audioErr.message);
+        answer = "I spoke but the system failed to transcribe my audio properly.";
       } finally {
-        // ALWAYS clean up the temporary disk file
-        if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        // ALWAYS clean up the temporary disk file securely
+        if (fs.existsSync(newPath)) fs.unlinkSync(newPath);
       }
     }
 
-    const result = await generateFollowUp(question, answer, isSkipped);
+    const result = await generateFollowUp(question || req.body.question, answer, isSkipped);
     // Attach the actual transcribed answer so the frontend can populate its UI accurately
     res.json({ ...result, transcribedAnswer: answer });
   } catch (error) {

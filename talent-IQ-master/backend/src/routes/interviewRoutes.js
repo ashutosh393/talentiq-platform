@@ -1,5 +1,6 @@
 import express from "express";
 import multer from "multer";
+import os from "os";
 import { protectRoute } from "../middleware/protectRoute.js";
 import {
   parseResume,
@@ -25,9 +26,9 @@ const uploadMemory = multer({
   },
 });
 
-// Multer — store Audio temporarily on disk for Groq SDK
+// Multer — store Audio temporarily on disk for Groq SDK natively via OS temp to avoid Railway FS errors
 const uploadDisk = multer({
-  dest: "uploads/",
+  dest: os.tmpdir(),
   limits: { fileSize: 20 * 1024 * 1024 },
 });
 
