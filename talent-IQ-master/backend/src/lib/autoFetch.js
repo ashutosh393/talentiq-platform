@@ -12,12 +12,29 @@ export const autoFetchLeetCodeProblems = async () => {
     try {
         console.log(`🔄 Starting Auto-Fetch cycle. (Targeting ${FETCH_LIMIT} problems with a ${RATE_DELAY_MS}ms rate-limit gap)`);
 
-        // Use ALFA api simply to get a raw list of the latest problem slugs. This endpoint is rarely rate-limited.
-        const listResponse = await fetch(`https://alfa-leetcode-api.onrender.com/problems?limit=${FETCH_LIMIT}`);
+        // Use Official LeetCode GraphQL to fetch the raw list.
+        // This avoids the 429 'Too Many Requests' IP ban from free Alfa-Render instances
+        const listQuery = {
+            query: `query problemsetQuestionList($categorySlug: String, $limit: Int, $skip: Int, $filters: QuestionListFilterInput) { 
+              questionList( categorySlug: $categorySlug limit: $limit skip: $skip filters: $filters ) { 
+                data { titleSlug difficulty } 
+              } 
+            }`,
+            variables: { categorySlug: "", skip: 0, limit: FETCH_LIMIT, filters: {} }
+        };
+
+        const listResponse = await fetch("https://leetcode.com/graphql", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+            },
+            body: JSON.stringify(listQuery)
+        });
         
         if (!listResponse.ok) {
             const text = await listResponse.text();
-            console.error(`[Auto-Fetch] List API returned ${listResponse.status}: ${text.substring(0, 100)}`);
+            console.error(`[Auto-Fetch] LeetCode List API returned ${listResponse.status}: ${text.substring(0, 100)}`);
             return;
         }
 
@@ -29,12 +46,12 @@ export const autoFetchLeetCodeProblems = async () => {
             return;
         }
 
-        if (!listData || !listData.problemsetQuestionList) {
-            console.error("Failed to fetch the problem index. Invalid response format.");
+        const problems = listData?.data?.questionList?.data;
+        if (!problems || !Array.isArray(problems)) {
+            console.error("Failed to fetch the problem index. Invalid response format from LeetCode.");
             return;
         }
 
-        const problems = listData.problemsetQuestionList;
         let addedCount = 0;
 
         for (const meta of problems) {
