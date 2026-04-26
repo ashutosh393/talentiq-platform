@@ -76,6 +76,7 @@ export async function chatFollowUp(req, res) {
     const rawSkipped = req.body.isSkipped;
     const isSkipped = rawSkipped === "true" || rawSkipped === true;
     let answer = req.body.answer;
+    const question = req.body.question;
 
     if (!question) {
       if (req.file) fs.unlinkSync(req.file.path);
@@ -100,7 +101,7 @@ export async function chatFollowUp(req, res) {
       }
     }
 
-    const result = await generateFollowUp(question || req.body.question, answer, isSkipped);
+    const result = await generateFollowUp(question, answer, isSkipped);
     // Attach the actual transcribed answer so the frontend can populate its UI accurately
     res.json({ ...result, transcribedAnswer: answer });
   } catch (error) {
