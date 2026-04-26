@@ -55,27 +55,32 @@ export async function generateFollowUp(question, answer, isSkipped = false) {
 
   const prompt = `You are an AI technical interviewer.
 The candidate just answered a question.
-Provide a brief evaluation of their answer (e.g., stating if it is correct, incorrect, or partially correct).
-Then, briefly suggest the ideal correct answer or missing key points. 
-DO NOT ask any follow-up questions. Your response should be a direct evaluation.
+
+1. Evaluate their answer immediately (Correct, Incorrect, or Partially Correct).
+2. Briefly suggest the ideal correct answer or missing key points.
+3. DO NOT ask any follow-up questions. 
 
 Question: "${question}"
 Candidate's Answer: "${answer}"
 
-Respond ONLY with valid JSON (no markdown):
-{ "followUp": "..." }`;
+You MUST respond ONLY with valid JSON in this exact format, with no other text or markdown:
+{
+  "followUp": "Your evaluation and the correct answer here."
+}`;
 
   try {
     const result = await groq.chat.completions.create({
       messages: [{ role: "user", content: prompt }],
       model: MODEL,
-      temperature: 0.7,
+      temperature: 0.5,
       response_format: { type: "json_object" },
-      max_tokens: 150
+      max_tokens: 500
     });
     
-    return JSON.parse(result.choices[0]?.message?.content || '{"followUp": ""}');
-  } catch {
+    const parsed = JSON.parse(result.choices[0]?.message?.content || '{}');
+    return { followUp: parsed.followUp || "Thank you. Let's proceed to the next question." };
+  } catch (err) {
+    console.error("Follow-up generation error:", err);
     return { followUp: "Thank you for your answer. Let's continue." };
   }
 }
