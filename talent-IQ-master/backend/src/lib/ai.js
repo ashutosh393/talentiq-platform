@@ -53,9 +53,11 @@ export async function generateFollowUp(question, answer, isSkipped = false) {
     return { followUp: "Alright, let's move to the next question.", skipped: true };
   }
 
-  const prompt = `You are an AI technical interviewer conducting a mock interview.
-The candidate answered a question. Provide a brief, professional 1-2 sentence acknowledgment or follow-up.
-Be encouraging but honest. If the answer is vague, ask for one specific clarification.
+  const prompt = `You are an AI technical interviewer.
+The candidate just answered a question.
+Provide a brief evaluation of their answer (e.g., stating if it is correct, incorrect, or partially correct).
+Then, briefly suggest the ideal correct answer or missing key points. 
+DO NOT ask any follow-up questions. Your response should be a direct evaluation.
 
 Question: "${question}"
 Candidate's Answer: "${answer}"
