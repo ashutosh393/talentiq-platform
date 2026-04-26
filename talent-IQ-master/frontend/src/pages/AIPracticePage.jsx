@@ -205,8 +205,8 @@ function AIPracticePage() {
         const formData = new FormData();
         formData.append("question", currentQ.question);
         formData.append("isSkipped", "false");
-        // Append a generic audio.wav extension so Groq's ffmpeg backend probes it properly regardless of browser origin
-        formData.append("audio", audioBlob, "audio.wav");
+        // Append a .webm extension so the backend correctly handles the format
+        formData.append("audio", audioBlob, "audio.webm");
 
         res = await axios.post(`/interview/chat/audio`, formData, { 
           headers: { "Content-Type": "multipart/form-data" },
@@ -257,8 +257,8 @@ function AIPracticePage() {
 
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
       mediaRecorderRef.current.onstop = () => {
-        // Leave Blob type generic to match the browser's raw recording chunks
-        const audioBlob = new Blob(audioChunksRef.current);
+        // Explicitly set the type so it's a valid webm file
+        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
         mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
         submitAnswer(false, audioBlob);
       };

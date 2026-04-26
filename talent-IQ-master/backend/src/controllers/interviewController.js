@@ -86,8 +86,9 @@ export async function chatFollowUp(req, res) {
     // If an audio file was uploaded, use Groq Whisper to transcribe it
     if (req.file) {
       // Multer strips file extensions in its temp paths. Groq's SDK strictly requires
-      // the filepath to contain a valid audio extension (e.g. .wav) to parse correctly.
-      const newPath = req.file.path + ".wav";
+      // the filepath to contain a valid audio extension to parse correctly.
+      const ext = req.file.originalname ? req.file.originalname.substring(req.file.originalname.lastIndexOf('.')) : '.webm';
+      const newPath = req.file.path + ext;
       fs.renameSync(req.file.path, newPath);
 
       try {
