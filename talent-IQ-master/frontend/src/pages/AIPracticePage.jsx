@@ -43,10 +43,10 @@ function AIPracticePage() {
   const [intPhase, setIntPhase] = useState("ai-speaking"); // "ai-speaking" | "thinking" | "recording" | "submitting"
   const [timeLeft, setTimeLeft] = useState(60);
   const [aiSpeaking, setAiSpeaking] = useState(false);
+  const [interimText, setInterimText] = useState("");
   
   const synthRef = useRef(window.speechSynthesis);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
 
   const chatBottomRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -73,10 +73,37 @@ function AIPracticePage() {
   useEffect(() => {
     return () => {
       synthRef.current?.cancel();
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+      if (recognitionRef.current) {
+        try { recognitionRef.current.stop(); } catch(e) {}
       }
     };
+  }, []);
+
+  // Web Speech API Initialization
+  useEffect(() => {
+    const SpeechRec = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRec) {
+      recognitionRef.current = new SpeechRec();
+      recognitionRef.current.continuous = true;
+      recognitionRef.current.interimResults = true;
+      
+      recognitionRef.current.onresult = (event) => {
+        let tempInterim = "";
+        let finalStr = "";
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalStr += event.results[i][0].transcript;
+          } else {
+            tempInterim += event.results[i][0].transcript;
+          }
+        }
+        if (finalStr) {
+          setInputText((prev) => (prev ? prev + " " + finalStr.trim() : finalStr.trim()));
+        }
+        setInterimText(tempInterim);
+      };
+      recognitionRef.current.onerror = (e) => console.error("Speech rec error:", e.error);
+    }
   }, []);
 
   // Text-to-Speech Helper
@@ -114,28 +141,16 @@ function AIPracticePage() {
   };
 
   const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      // Try to force WEBM if supported, otherwise let the browser default to its native format (Safari/iOS)
-      let options = {};
-      if (MediaRecorder.isTypeSupported('audio/webm')) {
-        options = { mimeType: 'audio/webm' };
+    setInputText("");
+    setInterimText("");
+    setIntPhase("recording");
+    
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+      } catch(err) {
+        console.error("Mic start error:", err);
       }
-      
-      const mediaRecorder = new MediaRecorder(stream, options);
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) audioChunksRef.current.push(event.data);
-      };
-
-      mediaRecorderRef.current = mediaRecorder;
-      mediaRecorder.start();
-      setIntPhase("recording");
-    } catch (err) {
-      console.error("Mic access denied or error:", err);
-      alert("Microphone access is strictly required to answer questions using Voice. Make sure you allow microphone access.");
     }
   };
 
@@ -194,34 +209,30 @@ function AIPracticePage() {
   const totalQ = questions.length;
   const answeredCount = Object.keys(answers).length;
 
-  const submitAnswer = async (isSkipped = false, audioBlob = null) => {
+  const submitAnswer = async (isSkipped = false) => {
     setIsLoading(true);
     setShowFollowUp(false);
     setIntPhase("submitting");
 
     try {
+      const finalInput = (inputText + " " + interimText).trim();
       let res;
-      if (audioBlob && !isSkipped) {
-        const formData = new FormData();
-        formData.append("question", currentQ.question);
-        formData.append("isSkipped", "false");
-        // Append a .webm extension so the backend correctly handles the format
-        formData.append("audio", audioBlob, "audio.webm");
-
-        res = await axios.post(`/interview/chat/audio`, formData, { 
-          headers: { "Content-Type": "multipart/form-data" },
-          withCredentials: true 
-        });
-      } else {
-        res = await axios.post(`/interview/chat`, {
+      if (isSkipped) {
+         res = await axios.post(`/interview/chat`, {
           question: currentQ.question,
           answer: "",
-          isSkipped,
+          isSkipped: true,
         }, { withCredentials: true });
+      } else {
+         res = await axios.post(`/interview/chat`, {
+           question: currentQ.question,
+           answer: finalInput || "No answer provided",
+           isSkipped: false,
+         }, { withCredentials: true });
       }
 
       const followUp = res.data.followUp;
-      const finalTranscribed = res.data.transcribedAnswer || (isSkipped ? "" : "Audio Answer Tracked.");
+      const finalTranscribed = isSkipped ? "" : (finalInput || "No answer provided");
 
       setAnswers((prev) => ({
         ...prev,
@@ -234,7 +245,7 @@ function AIPracticePage() {
     } catch {
       setAnswers((prev) => ({
         ...prev,
-        [currentQ.id]: { answer: isSkipped ? "" : "Failed to parse audio.", followUp: "Let's continue.", skipped: isSkipped },
+        [currentQ.id]: { answer: isSkipped ? "" : "Failed to record answer.", followUp: "Let's continue.", skipped: isSkipped },
       }));
       setFollowUpText("Let's continue.");
       setShowFollowUp(true);
@@ -242,28 +253,22 @@ function AIPracticePage() {
       speakText("Let's continue.");
     } finally {
       setIsLoading(false);
+      setInputText("");
+      setInterimText("");
     }
   };
 
   const handleStopAndSubmit = (isSkipped = false) => {
+    if (recognitionRef.current) {
+      try { recognitionRef.current.stop(); } catch(e) {}
+    }
+    
     if (isSkipped) {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-        mediaRecorderRef.current.stop();
-        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-      }
-      submitAnswer(true, null);
+      submitAnswer(true);
       return;
     }
-
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
-      mediaRecorderRef.current.onstop = () => {
-        // Explicitly set the type so it's a valid webm file
-        const audioBlob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-        mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
-        submitAnswer(false, audioBlob);
-      };
-      mediaRecorderRef.current.stop();
-    }
+    
+    submitAnswer(false);
   };
 
   const nextQuestion = () => {
@@ -734,22 +739,38 @@ function AIPracticePage() {
 
                         {intPhase === "thinking" && (
                           <div className="seq-card">
-                            <div className="seq-title">Thinking Time</div>
-                            <div className="timer-display">00:{timeLeft.toString().padStart(2, '0')}</div>
-                            <div className="seq-sub">Prepare your answer. Recording begins automatically at 00:00.</div>
-                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 16 }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", width: "100%", alignItems: "center", marginBottom: 12 }}>
+                              <div className="seq-title" style={{ margin: 0 }}>Thinking Time...</div>
+                              <div className="timer-display" style={{ margin: 0, fontSize: 20 }}>00:{timeLeft.toString().padStart(2, '0')}</div>
+                            </div>
+                            <textarea
+                              className="int-input"
+                              value={inputText}
+                              onChange={(e) => setInputText(e.target.value)}
+                              placeholder="Type your answer here..."
+                              style={{ width: "100%", minHeight: 80 }}
+                            />
+                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 12, width: "100%" }}>
                               <button className="btn-skip" onClick={() => handleStopAndSubmit(true)}>Skip →</button>
-                              <button className="btn-submit" onClick={startRecording}>Skip Time & Record Now</button>
+                              <button className="btn-submit" onClick={startRecording}>Start Mic & Predict Live</button>
+                              <button className="btn-finish" style={{ flex: "none", marginLeft: 8 }} onClick={() => handleStopAndSubmit(false)}>Submit Text</button>
                             </div>
                           </div>
                         )}
 
                         {intPhase === "recording" && (
                           <div className="seq-card">
-                            <div className="recording-banner">
+                            <div className="recording-banner" style={{ marginBottom: 12 }}>
                               <span className="rec-dot"></span> LIVE REC — Speak your answer...
                             </div>
-                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 16, width: "100%" }}>
+                            <textarea
+                              className="int-input"
+                              value={inputText + (interimText ? " " + interimText : "")}
+                              onChange={(e) => setInputText(e.target.value)}
+                              placeholder="Listening... (or type if mic fails)"
+                              style={{ width: "100%", minHeight: 80 }}
+                            />
+                            <div className="int-actions" style={{ justifyContent: "center", marginTop: 12, width: "100%" }}>
                               <button className="btn-skip" onClick={() => handleStopAndSubmit(true)}>Skip →</button>
                               <button className="btn-finish" style={{ flex: "none", width: "200px" }} onClick={() => handleStopAndSubmit(false)}>Submit Answer</button>
                             </div>
